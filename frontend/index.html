@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="vi" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="HCMUT LMS BTL2 - bảng điều khiển ghi danh, thống kê bài tập và kiểm tra cơ sở dữ liệu.">
+  <meta name="theme-color" content="#003b73">
+  <title>HCMUT LMS · BTL2</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">Bỏ qua điều hướng</a>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Điều hướng chính">
+      <a class="brand" href="#dashboard" aria-label="HCMUT LMS BTL2 - về tổng quan">
+        <span class="brand-mark" aria-hidden="true">BK<br>HCM</span>
+        <span>
+          <span class="brand-title">HCMUT LMS</span>
+          <span class="brand-subtitle">BTL2 · Database Systems</span>
+        </span>
+      </a>
+
+      <div class="sidebar-label">Bảng điều khiển</div>
+      <nav class="nav flex-column">
+        <a class="nav-link active" href="#dashboard" data-nav="dashboard"><span class="nav-glyph" aria-hidden="true">◫</span> Tổng quan</a>
+        <a class="nav-link" href="#enrollments" data-nav="enrollments"><span class="nav-glyph" aria-hidden="true">↔</span> Ghi danh</a>
+        <a class="nav-link" href="#statistics" data-nav="statistics"><span class="nav-glyph" aria-hidden="true">▤</span> Thống kê bài tập</a>
+        <a class="nav-link" href="#tools" data-nav="tools"><span class="nav-glyph" aria-hidden="true">ƒ</span> Hàm &amp; quy trình</a>
+        <a class="nav-link" href="#about" data-nav="about"><span class="nav-glyph" aria-hidden="true">ⓘ</span> Kiến trúc</a>
+      </nav>
+
+      <div class="sidebar-label">Tài nguyên</div>
+      <nav class="nav flex-column">
+        <a class="nav-link" href="/api/health" target="_blank" rel="noopener"><span class="nav-glyph" aria-hidden="true">♥</span> Health check</a>
+        <a class="nav-link" href="/api/meta" target="_blank" rel="noopener"><span class="nav-glyph" aria-hidden="true">{ }</span> API meta</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="status-dot ok" aria-hidden="true"></span>
+        <strong class="small">Offline-first</strong>
+        <p>Bootstrap 5 và toàn bộ tài nguyên được lưu cục bộ trong <code>frontend/vendor</code>.</p>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary btn-icon mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Mở menu" aria-controls="sidebar" aria-expanded="false">
+            <span aria-hidden="true">☰</span>
+          </button>
+          <div>
+            <h1 class="topbar-title">Quản trị học vụ</h1>
+            <p class="topbar-subtitle">Ghi danh · Thống kê · Kiểm tra tính toàn vẹn dữ liệu</p>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge-soft neutral" id="healthBadge" role="status" aria-live="polite">
+            <span class="status-dot" id="healthDot" aria-hidden="true"></span>
+            <span id="healthBadgeText">Đang kiểm tra</span>
+          </span>
+          <button class="btn btn-outline-primary btn-sm d-none d-sm-inline-flex" id="refreshDashboardBtn" type="button">↻ Làm mới</button>
+        </div>
+      </header>
+
+      <main class="content" id="mainContent">
+        <section class="section-block" id="dashboard" aria-labelledby="dashboardHeading">
+          <div class="hero">
+            <div class="hero-eyebrow">HCMUT · Database Systems · BTL2</div>
+            <h1 id="dashboardHeading">Một bảng điều khiển nhỏ, vận hành trên một schema thật.</h1>
+            <p>Thao tác ghi danh đi qua ba stored procedure, thống kê đi qua query procedure và function, còn các trigger bảo vệ sĩ số, lịch giảng, điểm và phản hồi.</p>
+            <div class="hero-badges" aria-label="Công nghệ sử dụng">
+              <span class="hero-badge">MySQL 8 · InnoDB</span>
+              <span class="hero-badge">Flask + PyMySQL</span>
+              <span class="hero-badge">Bootstrap 5 local</span>
+              <span class="hero-badge">UTF-8 · Offline</span>
+            </div>
+          </div>
+
+          <div class="stat-grid" aria-label="Chỉ số tổng quan">
+            <article class="stat-card" style="--accent:#2563eb">
+              <div class="stat-label">Sinh viên</div>
+              <div class="stat-value" id="statStudents">—</div>
+              <div class="stat-hint">Tài khoản sinh viên</div>
+            </article>
+            <article class="stat-card" style="--accent:#0f766e">
+              <div class="stat-label">Lớp học phần</div>
+              <div class="stat-value" id="statSections">—</div>
+              <div class="stat-hint">Tất cả học kỳ</div>
+            </article>
+            <article class="stat-card" style="--accent:#7c3aed">
+              <div class="stat-label">Ghi danh</div>
+              <div class="stat-value" id="statEnrollments">—</div>
+              <div class="stat-hint"><span id="statActiveEnrollments">—</span> đang hoạt động</div>
+            </article>
+            <article class="stat-card" style="--accent:#d97706">
+              <div class="stat-label">Bài tập</div>
+              <div class="stat-value" id="statAssignments">—</div>
+              <div class="stat-hint">Assignment records</div>
+            </article>
+            <article class="stat-card" style="--accent:#0891b2">
+              <div class="stat-label">Lượt nộp</div>
+              <div class="stat-value" id="statSubmissions">—</div>
+              <div class="stat-hint">Submission records</div>
+            </article>
+            <article class="stat-card" style="--accent:#be123c">
+              <div class="stat-label">Điểm đã công bố</div>
+              <div class="stat-value" id="statPublishedGrades">—</div>
+              <div class="stat-hint">Published grades</div>
+            </article>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-lg-5">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Trạng thái hệ thống</h2>
+                    <p class="panel-subtitle">Health check thời gian thực qua Flask</p>
+                  </div>
+                  <button class="btn btn-outline-secondary btn-sm" id="refreshHealthBtn" type="button">Kiểm tra</button>
+                </div>
+                <div class="panel-body">
+                  <div class="health-value">
+                    <span class="status-dot" id="healthPanelDot" aria-hidden="true"></span>
+                    <strong id="healthPanelText">Đang kết nối…</strong>
+                  </div>
+                  <div class="health-meta">
+                    MySQL: <code id="healthVersion">—</code><br>
+                    Database: <code id="healthDatabase">—</code><br>
+                    Server time: <span id="healthServerTime">—</span><br>
+                    Kiểm tra lúc: <span id="healthCheckedAt">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-7">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Luồng demo gợi ý</h2>
+                    <p class="panel-subtitle">Đi qua đủ CRUD, query procedure, function và trigger</p>
+                  </div>
+                  <span class="badge-soft active">3–5 phút</span>
+                </div>
+                <div class="panel-body">
+                  <ol class="note-list mb-0">
+                    <li><strong>Ghi danh:</strong> thêm một sinh viên vào lớp còn chỗ, thử trùng lớp để thấy procedure chặn.</li>
+                    <li><strong>Thống kê:</strong> lọc học kỳ 2026–2027 kỳ 1, xem tỷ lệ hoàn thành bài tập.</li>
+                    <li><strong>Hàm:</strong> tính tỷ lệ hoàn thành assignment 1 và điểm trung bình enrollment 1.</li>
+                    <li><strong>Kiến trúc:</strong> mở phần mô tả để đối chiếu trigger, procedure và function với yêu cầu BTL2.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block" id="enrollments" aria-labelledby="enrollmentsHeading">
+          <div class="section-heading">
+            <div>
+              <h2 id="enrollmentsHeading">Ghi danh</h2>
+              <p>CRUD gọi trực tiếp <code>sp_InsertEnrollment</code>, <code>sp_UpdateEnrollment</code>, <code>sp_DeleteEnrollment</code>.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-primary btn-sm" id="refreshEnrollmentsBtn" type="button">↻ Tải lại</button>
+              <button class="btn btn-primary" id="openCreateBtn" type="button">+ Thêm ghi danh</button>
+            </div>
+          </div>
+
+          <div class="panel mb-3">
+            <div class="panel-body tight">
+              <form class="filter-bar" id="enrollmentFilters">
+                <div>
+                  <label class="form-label" for="filterStudent">Sinh viên</label>
+                  <select class="form-select form-select-sm" id="filterStudent">
+                    <option value="">Tất cả sinh viên</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="filterSemester">Học kỳ</label>
+                  <select class="form-select form-select-sm" id="filterSemester">
+                    <option value="">Tất cả học kỳ</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="filterStatus">Trạng thái</label>
+                  <select class="form-select form-select-sm" id="filterStatus">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="DROPPED">DROPPED</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="filterLimit">Giới hạn</label>
+                  <select class="form-select form-select-sm" id="filterLimit">
+                    <option value="20">20 dòng</option>
+                    <option value="50" selected>50 dòng</option>
+                    <option value="100">100 dòng</option>
+                    <option value="200">200 dòng</option>
+                  </select>
+                </div>
+                <div class="filter-actions">
+                  <button class="btn btn-primary btn-sm" type="submit">Lọc</button>
+                  <button class="btn btn-outline-secondary btn-sm" id="resetEnrollmentFilters" type="button">Xóa lọc</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="table-toolbar">
+              <div>
+                <h3 class="panel-title">Danh sách ghi danh</h3>
+                <p class="panel-subtitle">Dữ liệu từ <code>sp_GetStudentEnrollments</code></p>
+              </div>
+              <span class="result-count" id="enrollmentCount" aria-live="polite">Đang tải…</span>
+            </div>
+            <div class="table-responsive" id="enrollmentTableWrap">
+              <table class="table align-middle" id="enrollmentTable">
+                <thead>
+                  <tr>
+                    <th scope="col">Sinh viên</th>
+                    <th scope="col">Lớp học phần</th>
+                    <th scope="col">Học kỳ</th>
+                    <th scope="col">Lịch học</th>
+                    <th scope="col">Ngày ghi danh</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col" class="text-end">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="enrollmentTableBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state d-none" id="enrollmentEmpty">
+              <div class="empty-glyph" aria-hidden="true">∅</div>
+              <strong>Không có ghi danh phù hợp</strong>
+              <span>Thử đổi bộ lọc hoặc thêm một ghi danh mới.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block" id="statistics" aria-labelledby="statisticsHeading">
+          <div class="section-heading">
+            <div>
+              <h2 id="statisticsHeading">Thống kê bài tập</h2>
+              <p>Query procedure <code>sp_GetAssignmentStatistics</code> với GROUP BY, HAVING và aggregate.</p>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" id="refreshStatsBtn" type="button">↻ Tải lại</button>
+          </div>
+
+          <div class="panel mb-3">
+            <div class="panel-body tight">
+              <form class="filter-bar" id="statisticsFilters">
+                <div>
+                  <label class="form-label" for="statsSemester">Học kỳ</label>
+                  <select class="form-select form-select-sm" id="statsSemester">
+                    <option value="">Tất cả học kỳ</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="statsSection">Lớp học phần</label>
+                  <select class="form-select form-select-sm" id="statsSection">
+                    <option value="">Tất cả lớp</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="statsMinSubmissions">Số lượt nộp tối thiểu</label>
+                  <input class="form-control form-control-sm" id="statsMinSubmissions" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+                <div class="filter-actions">
+                  <button class="btn btn-primary btn-sm" type="submit">Áp dụng</button>
+                  <button class="btn btn-outline-secondary btn-sm" id="resetStatsFilters" type="button">Xóa lọc</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="table-toolbar">
+              <div>
+                <h3 class="panel-title">Tỷ lệ hoàn thành theo bài tập</h3>
+                <p class="panel-subtitle">Tính trên sinh viên có ghi danh ACTIVE</p>
+              </div>
+              <span class="result-count" id="statsCount" aria-live="polite">Đang tải…</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table align-middle" id="statisticsTable">
+                <thead>
+                  <tr>
+                    <th scope="col">Bài tập</th>
+                    <th scope="col">Lớp / môn</th>
+                    <th scope="col" class="text-end">Đủ điều kiện</th>
+                    <th scope="col" class="text-end">Đã nộp</th>
+                    <th scope="col" class="text-end">Chưa nộp</th>
+                    <th scope="col" style="min-width: 150px">Hoàn thành</th>
+                    <th scope="col">Lần nộp cuối</th>
+                    <th scope="col" class="text-end">Hàm</th>
+                  </tr>
+                </thead>
+                <tbody id="statisticsTableBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state d-none" id="statisticsEmpty">
+              <div class="empty-glyph" aria-hidden="true">∅</div>
+              <strong>Chưa có dữ liệu thống kê</strong>
+              <span>Thử bỏ lọc hoặc chọn học kỳ khác.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block" id="tools" aria-labelledby="toolsHeading">
+          <div class="section-heading">
+            <div>
+              <h2 id="toolsHeading">Hàm &amp; quy trình</h2>
+              <p>Gọi function và procedure thật từ backend, không tính toán giả lập ở frontend.</p>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-lg-4">
+              <div class="panel tool-card h-100">
+                <div class="panel-header">
+                  <div>
+                    <h3 class="panel-title">Tỷ lệ hoàn thành</h3>
+                    <p class="panel-subtitle"><code>fn_CalculateAssignmentCompletionRate</code></p>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <label class="form-label" for="calcAssignmentId">Assignment ID</label>
+                  <div class="input-group">
+                    <input class="form-control" id="calcAssignmentId" type="number" min="1" step="1" value="1" inputmode="numeric">
+                    <button class="btn btn-primary" id="calcCompletionBtn" type="button">Tính</button>
+                  </div>
+                  <div class="tool-result" aria-live="polite">
+                    <div class="result-value" id="completionResult">—</div>
+                    <div class="result-label">Phần trăm sinh viên ACTIVE đã nộp ít nhất một bài</div>
+                    <div class="progress-thin mt-2" aria-hidden="true"><span id="completionProgress" style="width:0%"></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="panel tool-card h-100">
+                <div class="panel-header">
+                  <div>
+                    <h3 class="panel-title">Điểm trung bình</h3>
+                    <p class="panel-subtitle"><code>fn_CalculateStudentAverageScore</code></p>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <label class="form-label" for="calcEnrollmentId">Enrollment ID</label>
+                  <div class="input-group">
+                    <input class="form-control" id="calcEnrollmentId" type="number" min="1" step="1" value="1" inputmode="numeric">
+                    <button class="btn btn-primary" id="calcAverageBtn" type="button">Tính</button>
+                  </div>
+                  <div class="tool-result" aria-live="polite">
+                    <div class="result-value" id="averageResult">—</div>
+                    <div class="result-label">Trung bình phần trăm các assessment đã publish (không phải công thức điểm chính thức)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="panel tool-card h-100">
+                <div class="panel-header">
+                  <div>
+                    <h3 class="panel-title">Hợp đồng API</h3>
+                    <p class="panel-subtitle">Các endpoint chính</p>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <pre class="api-code mb-0"><span class="method">GET</span>  /api/enrollments
+<span class="method">POST</span> /api/enrollments
+<span class="method">PUT</span>  /api/enrollments/&lt;id&gt;
+<span class="method">DEL</span>  /api/enrollments/&lt;id&gt;
+<span class="method">GET</span>  /api/statistics/assignments
+<span class="method">GET</span>  /api/statistics/assignments/&lt;id&gt;/completion
+<span class="method">GET</span>  /api/statistics/enrollments/&lt;id&gt;/average</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block" id="about" aria-labelledby="aboutHeading">
+          <div class="section-heading">
+            <div>
+              <h2 id="aboutHeading">Kiến trúc &amp; ghi chú</h2>
+              <p>Những điểm cần nắm khi demo hoặc bàn giao.</p>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-lg-4">
+              <div class="panel h-100">
+                <div class="panel-header"><h3 class="panel-title">Phân lớp</h3></div>
+                <div class="panel-body">
+                  <ul class="note-list mb-0">
+                    <li><strong>Frontend:</strong> HTML/CSS/JS thuần, Bootstrap 5 local, không truy cập MySQL.</li>
+                    <li><strong>API:</strong> Flask Blueprint, service, repository, validation, error handler.</li>
+                    <li><strong>Database:</strong> 22 bảng, stored procedure, function, trigger và index.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="panel h-100">
+                <div class="panel-header"><h3 class="panel-title">Tính toàn vẹn</h3></div>
+                <div class="panel-body">
+                  <ul class="note-list mb-0">
+                    <li>Trigger kiểm tra lịch giảng theo học kỳ bằng điều kiện giao khoảng thời gian.</li>
+                    <li>Trigger duy trì <code>Assignment.SubmissionCount</code> khi thêm/xóa/sửa submission.</li>
+                    <li>Procedure chặn trùng ghi danh, vượt sĩ số và xóa ghi danh đã có điểm.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="panel h-100">
+                <div class="panel-header"><h3 class="panel-title">Giới hạn demo</h3></div>
+                <div class="panel-body">
+                  <ul class="note-list mb-0">
+                    <li>Seed là dữ liệu học vụ giả lập, có script reset riêng và chỉ dành cho database demo.</li>
+                    <li><code>SubmissionCount</code> là cột vật lý do BTL2 yêu cầu trigger; BTL1 xem đây là thuộc tính dẫn xuất.</li>
+                    <li>Điểm trung bình của function là chỉ số phân tích nội bộ, không thay thế công thức điểm chính thức.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel mt-3">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">Lệnh vận hành nhanh</h3>
+                <p class="panel-subtitle">Chạy từ thư mục gốc của repository</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <pre class="api-code mb-0">uv sync
+python scripts/verify_database.py
+uv run python run.py
+# Windows: setup.bat → run.bat → stop.bat</pre>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        HCMUT LMS BTL2 · Flask + MySQL 8 · Giao diện chạy offline bằng tài nguyên cục bộ.
+      </footer>
+    </div>
+  </div>
+
+  <div class="modal fade" id="enrollmentModal" tabindex="-1" aria-labelledby="enrollmentModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="enrollmentForm" novalidate>
+          <div class="modal-header">
+            <div>
+              <h2 class="modal-title fs-5" id="enrollmentModalTitle">Thêm ghi danh</h2>
+              <p class="panel-subtitle mb-0" id="enrollmentModalSubtitle">Procedure sẽ kiểm tra tài khoản, sĩ số và trùng lặp.</p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="enrollmentMode" value="create">
+            <input type="hidden" id="editingEnrollmentId" value="">
+            <div class="mb-3">
+              <label class="form-label" for="formStudent">Sinh viên <span class="text-danger">*</span></label>
+              <select class="form-select" id="formStudent" required></select>
+              <div class="invalid-feedback">Chọn một sinh viên.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="formSection">Lớp học phần <span class="text-danger">*</span></label>
+              <select class="form-select" id="formSection" required></select>
+              <div class="invalid-feedback">Chọn một lớp học phần.</div>
+            </div>
+            <div>
+              <label class="form-label" for="formStatus">Trạng thái</label>
+              <select class="form-select" id="formStatus">
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="DROPPED">DROPPED</option>
+                <option value="COMPLETED">COMPLETED</option>
+              </select>
+            </div>
+            <div class="alert alert-info small mt-3 mb-0 d-none" id="editStudentHint">
+              Khi cập nhật, sinh viên được giữ nguyên; chỉ có thể đổi lớp hoặc trạng thái.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="saveEnrollmentBtn">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="deleteModalTitle">Xóa ghi danh?</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2" id="deleteTargetText">Ghi danh sẽ bị xóa vĩnh viễn.</p>
+          <p class="small text-muted mb-0">Procedure sẽ từ chối nếu ghi danh đã có điểm.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Xóa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <noscript>
+    <div class="alert alert-warning m-3">Ứng dụng cần JavaScript để gọi Flask API.</div>
+  </noscript>
+
+  <script src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
