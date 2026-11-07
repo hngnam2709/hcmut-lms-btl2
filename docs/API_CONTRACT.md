@@ -252,7 +252,7 @@ curl "http://127.0.0.1:5000/api/enrollments?student_id=101&semester_id=4&status=
       "EndTime": "09:30:00",
       "RoomCode": "A1-101",
       "Capacity": 40,
-      "EnrollmentDate": "2026-09-05 09:00:00",
+      "EnrollmentDate": "2026-09-02 08:00:00",
       "EnrollmentStatus": "ACTIVE"
     }
   ],
@@ -348,10 +348,10 @@ Khong the xoa ghi danh da co diem. Hay giu lich su hoc tap.
     "student_count": 8,
     "section_count": 8,
     "enrollment_count": 15,
-    "active_enrollment_count": 12,
+    "active_enrollment_count": 13,
     "assignment_count": 6,
     "submission_count": 13,
-    "published_grade_count": 8
+    "published_grade_count": 9
   }
 }
 ```
@@ -379,11 +379,11 @@ Query:
       "AcademicYear": "2026-2027",
       "TermNo": 1,
       "EligibleStudentCount": 3,
-      "SubmittedStudentCount": 2,
-      "SubmissionCount": 3,
-      "MissingStudentCount": 1,
-      "CompletionRate": 66.67,
-      "LastSubmittedAt": "2026-09-20 10:00:00"
+      "SubmittedStudentCount": 3,
+      "SubmissionCount": 4,
+      "MissingStudentCount": 0,
+      "CompletionRate": 100.0,
+      "LastSubmittedAt": "2026-09-29 10:00:00"
     }
   ],
   "meta": { "count": 1 }
