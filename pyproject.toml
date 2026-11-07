@@ -1,0 +1,23 @@
+[project]
+name = "hcmut-lms-btl2"
+version = "0.1.0"
+description = "HCMUT LMS BTL2 database and Flask demonstration application"
+requires-python = ">=3.12"
+dependencies = [
+  "flask>=3.1,<4",
+  "pymysql>=1.1,<2",
+  "python-dotenv>=1.0,<2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-cov>=6.0,<7",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+addopts = "-q"
