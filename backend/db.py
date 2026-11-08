@@ -80,6 +80,18 @@ class Database:
                 conn.rollback()
                 raise
 
+    def insert(self, sql: str, params: Iterable[Any] | None = None) -> int:
+        with self.connection() as conn:
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql, tuple(params or ()))
+                    new_id = cursor.lastrowid
+                conn.commit()
+                return new_id
+            except Exception:
+                conn.rollback()
+                raise
+
     def ping(self) -> dict:
         row = self.fetch_one(
             "SELECT VERSION() AS version, DATABASE() AS database_name, NOW() AS server_time"

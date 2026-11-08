@@ -1,6 +1,6 @@
 from flask import Flask
 
-from backend.api import auth, catalog, enrollments, health, statistics
+from backend.api import auth, catalog, enrollments, health, statistics, student
 
 
 def register_blueprints(app: Flask) -> None:
@@ -9,3 +9,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(catalog.bp)
     app.register_blueprint(enrollments.bp)
     app.register_blueprint(statistics.bp)
+    app.register_blueprint(student.bp)

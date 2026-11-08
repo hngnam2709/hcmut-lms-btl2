@@ -13,12 +13,18 @@ from backend.config import Config
 from backend.db import Database
 from backend.errors import register_error_handlers
 from backend.logging_config import configure_logging, register_request_logging
-from backend.repositories import CatalogRepository, EnrollmentRepository, StatisticsRepository
+from backend.repositories import (
+    CatalogRepository,
+    EnrollmentRepository,
+    StatisticsRepository,
+    StudentRepository,
+)
 from backend.services import (
     CatalogService,
     EnrollmentService,
     HealthService,
     StatisticsService,
+    StudentService,
 )
 
 # Import session configuration
@@ -72,6 +78,7 @@ def create_app(config: dict | object | None = None) -> Flask:
         "catalog": CatalogService(CatalogRepository(db)),
         "statistics": StatisticsService(StatisticsRepository(db)),
         "health": HealthService(db),
+        "student": StudentService(StudentRepository(db)),
     }
 
     register_error_handlers(app)
