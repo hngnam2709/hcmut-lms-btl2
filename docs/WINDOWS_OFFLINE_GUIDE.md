@@ -207,3 +207,31 @@ Frontend:
 - Không dùng `FLASK_DEBUG=1` khi demo công khai.
 - Nếu dùng Docker, nhớ database trong container sẽ mất nếu xóa container; seed lại bằng `run_all.sql`.
 - Nếu muốn reset demo: `mysql -u root -p < database\reset_database.sql` rồi `run_all.sql`. **`reset_database.sql` DROP DATABASE**, chỉ dùng cho demo.
+
+## 12. Mẫu ghi nhận kết quả clean-install (điền trước khi nộp)
+
+| Mục | Giá trị |
+|---|---|
+| Ngày chạy | |
+| Windows | Windows 10 / 11, phiên bản build |
+| Python | `python --version` |
+| uv | `uv --version` |
+| MySQL | phiên bản + cách chạy (service/Docker) |
+| Lệnh setup | `setup.bat` |
+| Kết quả `check_environment.bat` | PASS / FAIL |
+| Kết quả `run.bat` | Flask chạy tại `http://127.0.0.1:5000` |
+| Kết quả `uv run pytest` | 57 passed |
+| Kết quả `python scripts\verify_database.py` | DATABASE VERIFICATION: PASS |
+| Kết quả `python scripts\smoke_api.py` | LIVE API SMOKE: PASS (24/24) |
+| Ảnh/log đính kèm | Đường dẫn file |
+
+Checklist:
+
+- [ ] Chạy trên máy Windows **sạch**, chưa có `.venv`, chưa có database `hcmut_lms`.
+- [ ] `setup.bat` tạo `.venv` và cài dependency thành công.
+- [ ] `check_environment.bat` báo đủ Python/MySQL.
+- [ ] Import `database\run_all.sql` thành công (22 bảng, 13 trigger, 5 procedure, 2 function).
+- [ ] `run.bat` mở được giao diện và đăng nhập 3 vai trò.
+- [ ] Mở DevTools → Network: không có request CDN.
+- [ ] Chạy `pytest`, `verify_database.py`, `smoke_api.py` và lưu log.
+- [ ] Chụp ảnh màn hình Dashboard/Ghi danh/Thống kê.

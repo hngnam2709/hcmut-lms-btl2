@@ -1,16 +1,18 @@
 # Phân công 5 thành viên
 
 > **Bắt buộc trước khi nộp:** thay `[Họ tên]` và `[MSSV]` bằng thông tin thật. Tài liệu này được thiết kế để mỗi thành viên sở hữu ít nhất một trigger/function/procedure, đúng yêu cầu BTL2.
+>
+> **Đối chiếu Git:** chạy `git shortlog -sne --all` và `git log --format='%an <%ae>' -- <file>` để xác nhận mỗi thành viên có commit gắn với object mình nhận. Ghi kết quả vào cột “Git evidence” bên dưới.
 
 ## 1. Bảng phân công
 
-| Thành viên | Vai trò chính | SQL object sở hữu | Backend / Frontend | Tài liệu / Test |
-|---|---|---|---|---|
-| **TV1** `[Họ tên]` — `[MSSV]` | Database lead, schema & ràng buộc | `trg_section_schedule_bi`, `trg_section_schedule_bu`, `trg_feedback_validate_bi`, `trg_feedback_validate_bu` | Review schema repository/DB wrapper | `docs/DATABASE_DESIGN.md`, `docs/TECHNICAL_DECISIONS.md`; kiểm tra 22 bảng/constraint/index |
-| **TV2** `[Họ tên]` — `[MSSV]` | CRUD & backend enrollment | `sp_InsertEnrollment`, `sp_UpdateEnrollment`, `sp_DeleteEnrollment` | `backend/api/enrollments.py`, `services/enrollment_service.py`, `repositories/enrollment_repository.py`; UI tab Ghi danh | `backend/tests/test_enrollments_api.py`; SQL tests 01–03 |
-| **TV3** `[Họ tên]` — `[MSSV]` | Data integrity & seed | `trg_enrollment_capacity_bi`, `trg_enrollment_capacity_bu`, `trg_grade_validate_bi`, `trg_grade_validate_bu` | Review error mapping/validation; hỗ trợ dữ liệu demo | `database/seeds/*`, kiểm tra ≥5 hàng/bảng; SQL test 09 (grade score) |
-| **TV4** `[Họ tên]` — `[MSSV]` | Query, function & statistics | `sp_GetStudentEnrollments`, `sp_GetAssignmentStatistics`, `fn_CalculateAssignmentCompletionRate`, `fn_CalculateStudentAverageScore` | `backend/api/statistics.py`, `services/statistics_service.py`, `repositories/statistics_repository.py`; UI tab Thống kê/Hàm | `backend/tests/test_statistics_api.py`, `test_repositories.py`; SQL tests 06–07 |
-| **TV5** `[Họ tên]` — `[MSSV]` | Submission rules & UI/ops | `trg_submission_count_ai`, `trg_submission_count_ad`, `trg_submission_count_au`, `trg_submission_validate_bi`, `trg_submission_validate_bu` | `frontend/*`, `run.py`, `setup.bat`, `run.bat`, `stop.bat`, `check_environment.bat` | `backend/tests/test_frontend.py`; SQL test 05; live smoke; Windows checklist |
+| Thành viên | Vai trò chính | SQL object sở hữu | Backend / Frontend | Tài liệu / Test | Git evidence |
+|---|---|---|---|---|---|
+| **TV1** `[Họ tên]` — `[MSSV]` | Database lead, schema & ràng buộc | `trg_section_schedule_bi`, `trg_section_schedule_bu`, `trg_feedback_validate_bi`, `trg_feedback_validate_bu` | Review schema repository/DB wrapper | `docs/DATABASE_DESIGN.md`, `docs/TECHNICAL_DECISIONS.md`; kiểm tra 22 bảng/constraint/index | `git log -- database/triggers/05_triggers.sql` |
+| **TV2** `[Họ tên]` — `[MSSV]` | CRUD & backend enrollment | `sp_InsertEnrollment`, `sp_UpdateEnrollment`, `sp_DeleteEnrollment` | `backend/api/enrollments.py`, `services/enrollment_service.py`, `repositories/enrollment_repository.py`; UI tab Ghi danh | `backend/tests/test_enrollments_api.py`; SQL tests 01–03 | `git log -- backend/api/enrollments.py docs/CRUD_PROCEDURE_TRACE.md` |
+| **TV3** `[Họ tên]` — `[MSSV]` | Data integrity & seed | `trg_enrollment_capacity_bi`, `trg_enrollment_capacity_bu`, `trg_grade_validate_bi`, `trg_grade_validate_bu` | Review error mapping/validation; hỗ trợ dữ liệu demo | `database/seeds/*`, `docs/ROW_COUNTS.md`; SQL test 09 (grade score) | `git log -- database/seeds scripts/report_row_counts.py` |
+| **TV4** `[Họ tên]` — `[MSSV]` | Query, function & statistics | `sp_GetStudentEnrollments`, `sp_GetAssignmentStatistics`, `fn_CalculateAssignmentCompletionRate`, `fn_CalculateStudentAverageScore` | `backend/api/statistics.py`, `services/statistics_service.py`, `repositories/statistics_repository.py`; UI tab Thống kê/Hàm | `backend/tests/test_statistics_api.py`, `test_repositories.py`; SQL tests 06–07, 12–13 | `git log -- database/functions/07_functions.sql docs/FUNCTION_EVIDENCE.md` |
+| **TV5** `[Họ tên]` — `[MSSV]` | Submission rules & UI/ops | `trg_submission_count_ai`, `trg_submission_count_ad`, `trg_submission_count_au`, `trg_submission_validate_bi`, `trg_submission_validate_bu` | `frontend/*`, `run.py`, `setup.bat`, `run.bat`, `stop.bat`, `check_environment.bat` | `backend/tests/test_frontend.py`; SQL test 05, 10–11; live smoke; Windows checklist | `git log -- database/triggers/05_triggers.sql frontend/assets/app.js` |
 
 ## 2. Ma trận phủ SQL object
 
@@ -90,6 +92,8 @@ Kịch bản câu hỏi có trong `docs/DEMO_SCRIPT.md`.
 ## 7. Việc bắt buộc trước khi nộp
 
 - [ ] Điền đủ họ tên/MSSV vào bảng trên.
+- [ ] Chạy `python3 scripts/check_submission_readiness.py` và xử lý mọi FAIL.
+- [ ] Dán kết quả `git shortlog -sne --all` vào báo cáo để đối chiếu đóng góp.
 - [ ] Mỗi thành viên ký cam kết đã đọc object của mình và object được review.
 - [ ] Chạy lại `verify_database.py`, `pytest`, `smoke_api.py` trên máy sạch.
 - [ ] Chạy `check_environment.bat` trên Windows thật (hiện chưa xác minh).

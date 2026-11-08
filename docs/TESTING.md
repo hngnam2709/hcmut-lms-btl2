@@ -2,19 +2,20 @@
 
 ## 1. Trạng thái hiện tại
 
-Chạy ngày **2026-11-07** trên Linux, Python 3.12.14, MySQL 8.4.13 (Docker).
+Chạy ngày **2026-11-08** trên Linux, Python 3.12, MySQL 8.4.13 (Docker).
 
 | Lớp kiểm thử | Lệnh | Kết quả |
 |---|---|---|
-| Python unit/API | `uv run pytest` | **48 passed** |
-| Clean clone | `git clone` + `uv sync` + `uv run pytest` | **48 passed** |
-| Coverage backend | `uv run pytest --cov=backend --cov-report=term-missing` | **86%** |
+| Python unit/API | `uv run pytest` | **57 passed** |
+| Clean clone | `git clone` + `uv sync` + `uv run pytest` | **57 passed** |
+| Coverage backend | `uv run pytest --cov=backend --cov-report=term-missing` | Chạy lại khi cần; không chốt số cũ |
 | Database end-to-end | `python3 scripts/verify_database.py` | **PASS** |
-| Live HTTP smoke | `python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000` | **14/14 PASS** |
+| Live HTTP smoke | `python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000` | **24/24 PASS** (gồm phân quyền 3 vai trò) |
 | Frontend static | `curl` `/`, CSS, JS, Bootstrap, favicon | **PASS** |
 | `database/run_all.sql` wrappers | Docker MySQL 8.4 + mount repo, `docker exec -i` | **PASS** (22 bảng / 13 trigger / 5 procedure / 2 function) |
 | Windows `.bat` | Chưa có máy Windows | **Chưa xác minh** |
-| Visual cross-browser | Chưa có browser headless | **Chưa xác minh** |
+| Browser E2E (Chromium headless) | Playwright: login 3 role, Student/Staff/Admin, CRUD Ghi danh, Thống kê | **PASS, `ERRORS []`** |
+| Visual cross-browser khác | Firefox/Safari/Edge | **Chưa xác minh** |
 
 Không có kết quả nào ở trên là suy đoán; đây là output thật từ môi trường phát triển.
 
@@ -37,7 +38,9 @@ Các file:
 | `backend/tests/test_validation.py` | int/bool/status/range |
 | `backend/tests/test_repositories.py` | xác nhận đúng tên procedure/function được gọi |
 | `backend/tests/test_json_provider.py` | Decimal, datetime, MySQL TIME (`timedelta`) |
-| `backend/tests/test_frontend.py` | index, JS/CSS, Bootstrap local, JSON 404 |
+| `backend/tests/test_auth.py` | login/logout, role guard, profile/catalog/enroll/drop, quiz finish, files |
+| `backend/tests/test_config.py` | SECRET_KEY fail-fast ở production, cho phép demo secret ở local |
+| `backend/tests/test_frontend.py` | index, JS/CSS, Bootstrap local, JSON 404, admin tabs Ghi danh/Thống kê |
 
 Coverage 86% toàn backend. Phần chưa cover chủ yếu là nhánh kết nối PyMySQL thật (`backend/db.py`) và một số nhánh lỗi hiếm; các nhánh này được kiểm tra bằng verifier + live smoke.
 
@@ -68,6 +71,10 @@ Script sẽ:
    - `07_query_procedures.sql`
    - `08_constraint_expected_fail_email.sql`
    - `09_grade_expected_fail_score.sql`
+   - `10_trigger_dml_matrix.sql` (INSERT/UPDATE/DELETE + move assignment + bulk)
+   - `11_trigger_expected_fail_schedule_update.sql`
+   - `12_function_boundary.sql`
+   - `13_function_expected_fail_invalid.sql`
 5. Kiểm tra:
    - đúng **22 bảng**
    - **13 trigger**, **5 procedure**, **2 function**
@@ -103,7 +110,7 @@ Terminal khác:
 python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000
 ```
 
-Script kiểm tra 14 bước:
+Script kiểm tra 24 bước:
 
 1. health
 2. meta
@@ -119,6 +126,12 @@ Script kiểm tra 14 bước:
 12. delete enrollment
 13. duplicate bị chặn (400)
 14. limit sai bị chặn (422)
+15. student login + profile + sections (chỉ 2 lớp)
+16. student bị chặn section không ghi danh (404) và API Staff (403)
+17. staff login + 3 lớp phụ trách + sinh viên lớp 1
+18. staff bị chặn lớp không phụ trách (403)
+19. admin login + 18 tài khoản + 22 bảng dữ liệu
+20. admin không được chấm điểm (RB13, 403)
 
 Script tự xóa enrollment vừa tạo. Chạy lại nhiều lần được.
 

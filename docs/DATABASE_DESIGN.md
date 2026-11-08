@@ -72,7 +72,7 @@ Các CHECK nằm trong `database/constraints/03_checks.sql`, bao gồm:
 - trạng thái tài khoản, email, avatar URL
 - term 1–3, ngày học kỳ, format năm học
 - credits > 0, component type THEORY/PRACTICE
-- sức chứa > 0, section status OPEN/CLOSED/CANCELLED, thứ 2–8, giờ mở < đóng
+- sức chứa > 0, section status OPEN/CLOSED/CANCELLED, thứ 1–7, giờ mở < đóng
 - enrollment status ACTIVE/DROPPED/COMPLETED
 - resource type, URL, thứ tự hiển thị
 - MaxScore > 0, MaxAttempts NULL hoặc > 0

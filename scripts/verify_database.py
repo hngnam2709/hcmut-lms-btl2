@@ -37,6 +37,8 @@ POSITIVE_TESTS = [
     "database/tests/05_trigger_derived_submission_count.sql",
     "database/tests/06_function_smoke.sql",
     "database/tests/07_query_procedures.sql",
+    "database/tests/10_trigger_dml_matrix.sql",
+    "database/tests/12_function_boundary.sql",
 ]
 NEGATIVE_TESTS = [
     "database/tests/02_procedure_expected_fail_duplicate.sql",
@@ -44,6 +46,8 @@ NEGATIVE_TESTS = [
     "database/tests/04_trigger_expected_fail_schedule.sql",
     "database/tests/08_constraint_expected_fail_email.sql",
     "database/tests/09_grade_expected_fail_score.sql",
+    "database/tests/11_trigger_expected_fail_schedule_update.sql",
+    "database/tests/13_function_expected_fail_invalid.sql",
 ]
 
 

@@ -8,9 +8,9 @@ Các kết quả dưới đây được chạy trên môi trường phát triể
 
 | Hạng mục | Kết quả | Ghi chú |
 |---|---|---|
-| Python unit/API tests | **48 passed** | `uv run pytest` |
+| Python unit/API tests | **53 passed** | `uv run pytest` |
 | Database verifier | **PASS** | `python3 scripts/verify_database.py` |
-| Live API smoke | **14/14 PASS** | `scripts/smoke_api.py` với Flask + MySQL thật |
+| Live API smoke | **24/24 PASS** | `scripts/smoke_api.py` với Flask + MySQL thật, gồm phân quyền 3 vai trò |
 | Frontend static smoke | **PASS** | `/`, CSS, JS, Bootstrap local, favicon trả HTTP 200 |
 | Windows `.bat` scripts | **Chưa chạy trên Windows** | Cần kiểm tra lại trên máy Windows trước khi nộp |
 
@@ -59,7 +59,7 @@ hcmut-lms-btl2/
 │   ├── api/                 # Blueprint: health, catalog, enrollments, statistics
 │   ├── repositories/        # SQL/procedure calls, parameterized
 │   ├── services/            # Use cases và phối hợp repository
-│   ├── tests/               # 48 unit/API tests
+│   ├── tests/               # 53 unit/API tests
 │   ├── app.py               # Application factory
 │   ├── config.py            # .env/MySQL config
 │   ├── db.py                # PyMySQL wrapper + procedure caller
