@@ -29,23 +29,27 @@
 
 ### Backend
 
-- `backend/app.py`: application factory, JSON provider, static frontend.
-- `backend/api/*`: 4 Blueprint.
-- `backend/services/*`: 4 service.
-- `backend/repositories/*`: 3 repository.
-- `backend/db.py`: PyMySQL wrapper, `call_procedure`, `call_procedure_one`.
+- `backend/app.py`: application factory, JSON provider, static frontend, session config.
+- `backend/api/*`: 7 Blueprint (`auth`, `health`, `catalog`, `enrollments`, `statistics`, `student`, `staff`, `admin`).
+- `backend/services/*`: 7 service (thêm `student`, `staff`, `admin`).
+- `backend/repositories/*`: 6 repository (thêm `student`, `staff`, `admin`).
+- `backend/auth_guard.py`: decorator `require_role`, `current_user_id`.
+- `backend/session_config.py`: cấu hình Flask session.
+- `backend/db.py`: PyMySQL wrapper, `call_procedure`, `execute`, `insert`.
 - `backend/validation.py`: validate int/status/body.
 - `backend/errors.py`: AppError, MySQL error mapping, JSON errors.
 - `backend/logging_config.py`: request ID + rotating log.
 - Health check `/api/health`, liveness `/api/health/live`.
+- Đăng nhập demo `/api/auth/*`: chọn role + tài khoản, không mật khẩu.
 - CRUD `Enrollment` gọi đúng 3 procedure.
+- API phân quyền: student/staff/admin chỉ truy cập dữ liệu thuộc phạm vi của mình.
 - Query procedure và function được gọi thật bởi API.
 
 ### Frontend
 
-- `frontend/index.html`: dashboard, ghi danh, thống kê, function tools, kiến trúc.
-- `frontend/assets/app.js`: fetch API, CRUD modal, filter, toast, health polling.
-- `frontend/assets/styles.css`: responsive, accessible, print.
+- `frontend/index.html`: màn hình đăng nhập + shell ứng dụng, dashboard, workspace theo role.
+- `frontend/assets/app.js`: auth session, render workspace student/staff/admin, CRUD, filter, toast.
+- `frontend/assets/styles.css`: theme hồng phấn phong cách Moodle, login, responsive, print.
 - `frontend/vendor/bootstrap/*`: Bootstrap 5.3.3 + license, không CDN.
 - Không kết nối MySQL trực tiếp.
 
@@ -64,7 +68,7 @@
 
 ```text
 uv run pytest
-→ 38 passed
+→ 48 passed
 
 uv run pytest --cov=backend --cov-report=term-missing
 → TOTAL 86%
@@ -91,7 +95,7 @@ database/run_all.sql qua Docker + mount repo
 → PASS: 22 bảng, 13 trigger, 5 procedure, 2 function, Assignment=6
 
 git clone <repo> /tmp/hcmut-lms-clean && uv sync && uv run pytest
-→ 38 passed trong checkout sạch
+→ 48 passed trong checkout sạch
 ```
 
 Chi tiết: `docs/TESTING.md`.

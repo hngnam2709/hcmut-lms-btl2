@@ -69,7 +69,7 @@ Cả hai được gọi thật qua API `/api/statistics/...` và được kiểm
 
 | Yêu cầu | Hiện thực | Bằng chứng | Trạng thái |
 |---|---|---|---|
-| 3.1 Màn hình thêm/xóa/sửa bảng ở 2.1 | Tab **Ghi danh**: modal thêm/sửa, nút xóa, gọi 3 procedure CRUD | `frontend/index.html`, `frontend/assets/app.js`; `backend/api/enrollments.py`; 38 tests; live smoke 14/14 | **PASS** |
+| 3.1 Màn hình thêm/xóa/sửa bảng ở 2.1 | Tab **Ghi danh**: modal thêm/sửa, nút xóa, gọi 3 procedure CRUD | `frontend/index.html`, `frontend/assets/app.js`; `backend/api/enrollments.py`; 48 tests; live smoke 14/14 | **PASS** |
 | 3.2 Danh sách gọi query procedure; search/filter/sort/validate/error | Bảng ghi danh từ `sp_GetStudentEnrollments`; filter sinh viên/học kỳ/status/limit; cập nhật/xóa ngay trên bảng; lỗi procedure hiển thị toast | `GET /api/enrollments`; `frontend` tab Ghi danh | **PASS** |
 | 3.3 Giao diện cho procedure/hàm khác | Tab **Thống kê bài tập** gọi `sp_GetAssignmentStatistics`; hai thẻ gọi 2 function | `frontend` tab Thống kê + Hàm; API statistics | **PASS** |
 | Ứng dụng thực sự kết nối CSDL | Flask kết nối MySQL bằng PyMySQL; health check trả version/database thật | `GET /api/health` trả MySQL 8.4.13; live smoke PASS | **PASS** |

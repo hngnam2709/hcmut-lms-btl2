@@ -8,7 +8,7 @@ Các kết quả dưới đây được chạy trên môi trường phát triể
 
 | Hạng mục | Kết quả | Ghi chú |
 |---|---|---|
-| Python unit/API tests | **38 passed** | `uv run pytest` |
+| Python unit/API tests | **48 passed** | `uv run pytest` |
 | Database verifier | **PASS** | `python3 scripts/verify_database.py` |
 | Live API smoke | **14/14 PASS** | `scripts/smoke_api.py` với Flask + MySQL thật |
 | Frontend static smoke | **PASS** | `/`, CSS, JS, Bootstrap local, favicon trả HTTP 200 |
@@ -18,12 +18,16 @@ Chi tiết và giới hạn được ghi trong [`docs/TESTING.md`](docs/TESTING.
 
 ## Tính năng chính
 
+- **Đăng nhập demo + phân quyền**: màn hình chọn role `Student / Staff / Admin` rồi chọn tài khoản có sẵn (không mật khẩu, đúng BTL1 — `UserAccount` không có thuộc tính password). Mỗi role có dashboard và API giới hạn đúng phạm vi của mình.
+- **Student**: xem lớp đã ghi danh, thông báo, tài liệu, bài tập/quiz, nộp bài, xem điểm đã công bố, phản hồi trên bài nộp của mình.
+- **Staff**: xem lớp mình phụ trách, quản lý sinh viên, thông báo, tài liệu, assignment/quiz, chấm điểm bài nộp và grade (RB13).
+- **Admin**: quản lý tài khoản (khóa/mở khóa theo RB07), khoa, học kỳ, môn học, thành phần, lớp học phần, ghi danh; khám phá toàn bộ 22 bảng (read-only).
 - **22 bảng** MySQL 8, InnoDB, `utf8mb4`, khóa chính/ngoại, UNIQUE, CHECK và index.
 - **5 stored procedure**: 3 procedure CRUD cho `Enrollment` và 2 procedure truy vấn.
 - **2 stored function**: tỷ lệ hoàn thành bài tập và điểm trung bình nội bộ, có cursor + IF/LOOP + kiểm tra tham số.
 - **13 trigger**: kiểm tra trùng lịch giảng/phòng, duy trì `Assignment.SubmissionCount`, bảo vệ sĩ số, submission, grade và feedback.
-- **Flask API** theo mô hình Blueprint → Service → Repository, validation, error handler, logging, health check.
-- **Giao diện offline**: HTML5/CSS3/JS + Bootstrap 5 vendored trong `frontend/vendor`; không CDN, không truy cập MySQL trực tiếp.
+- **Flask API** theo mô hình Blueprint → Service → Repository, session auth, validation, error handler, logging, health check.
+- **Giao diện offline**: HTML5/CSS3/JS + Bootstrap 5 vendored trong `frontend/vendor`; không CDN, không truy cập MySQL trực tiếp; theme hồng phấn phong cách Moodle.
 - **Windows scripts**: `setup.bat`, `check_environment.bat`, `run.bat`, `stop.bat`.
 - **Kiểm thử thật**: SQL verifier dùng Docker MySQL, test API/unit, smoke test HTTP, tài liệu demo và bàn giao.
 
@@ -55,7 +59,7 @@ hcmut-lms-btl2/
 │   ├── api/                 # Blueprint: health, catalog, enrollments, statistics
 │   ├── repositories/        # SQL/procedure calls, parameterized
 │   ├── services/            # Use cases và phối hợp repository
-│   ├── tests/               # 38 unit/API tests
+│   ├── tests/               # 48 unit/API tests
 │   ├── app.py               # Application factory
 │   ├── config.py            # .env/MySQL config
 │   ├── db.py                # PyMySQL wrapper + procedure caller

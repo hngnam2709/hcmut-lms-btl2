@@ -6,8 +6,8 @@ Chạy ngày **2026-11-07** trên Linux, Python 3.12.14, MySQL 8.4.13 (Docker).
 
 | Lớp kiểm thử | Lệnh | Kết quả |
 |---|---|---|
-| Python unit/API | `uv run pytest` | **38 passed** |
-| Clean clone | `git clone` + `uv sync` + `uv run pytest` | **38 passed** |
+| Python unit/API | `uv run pytest` | **48 passed** |
+| Clean clone | `git clone` + `uv sync` + `uv run pytest` | **48 passed** |
 | Coverage backend | `uv run pytest --cov=backend --cov-report=term-missing` | **86%** |
 | Database end-to-end | `python3 scripts/verify_database.py` | **PASS** |
 | Live HTTP smoke | `python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000` | **14/14 PASS** |
