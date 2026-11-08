@@ -69,6 +69,17 @@ class Database:
         rows = self.call_procedure(name, params)
         return rows[0] if rows else None
 
+    def execute(self, sql: str, params: Iterable[Any] | None = None) -> int:
+        with self.connection() as conn:
+            try:
+                with conn.cursor() as cursor:
+                    affected = cursor.execute(sql, tuple(params or ()))
+                conn.commit()
+                return affected
+            except Exception:
+                conn.rollback()
+                raise
+
     def ping(self) -> dict:
         row = self.fetch_one(
             "SELECT VERSION() AS version, DATABASE() AS database_name, NOW() AS server_time"

@@ -21,6 +21,9 @@ from backend.services import (
     StatisticsService,
 )
 
+# Import session configuration
+from backend.session_config import configure_session
+
 
 class APIJSONProvider(DefaultJSONProvider):
     @staticmethod
@@ -58,6 +61,9 @@ def create_app(config: dict | object | None = None) -> Flask:
     configure_logging(app)
     register_request_logging(app)
     app.logger.setLevel(logging.INFO)
+
+    # Configure session support
+    configure_session(app)
 
     db = Database(app.config)
     app.extensions["db"] = db

@@ -12,7 +12,12 @@
     deleteTarget: null,
     sectionMap: new Map(),
     studentMap: new Map(),
+    user: null,
+    role: null,
+    selectedRole: null,
   };
+
+  const ROLE_LABELS = { STUDENT: "Sinh viên", STAFF: "Cán bộ", ADMIN: "Quản trị viên" };
 
   const $ = (selector) => document.querySelector(selector);
 
@@ -633,12 +638,140 @@
     $("#refreshHealthBtn").addEventListener("click", () => loadHealth(true));
     $("#calcCompletionBtn").addEventListener("click", runToolCompletion);
     $("#calcAverageBtn").addEventListener("click", runAverage);
+    $("#loginSubmitBtn").addEventListener("click", submitLogin);
+    $("#logoutBtn").addEventListener("click", logout);
     attachTableActions();
     attachNavigation();
   }
 
+  async function checkAuth() {
+    try {
+      const payload = await api("/api/auth/me");
+      state.user = payload.data?.user || null;
+      state.role = payload.data?.role || null;
+    } catch (error) {
+      state.user = null;
+      state.role = null;
+    }
+
+    const loginScreen = $("#loginScreen");
+    const appShell = $("#appShell");
+    if (state.role) {
+      loginScreen.classList.add("d-none");
+      appShell.style.display = "";
+      $("#userName").textContent = state.user?.FullName || "—";
+      $("#userRoleBadge").textContent = ROLE_LABELS[state.role] || state.role;
+      applyRoleNavigation();
+      return true;
+    }
+    appShell.style.display = "none";
+    loginScreen.classList.remove("d-none");
+    loadLoginRoles();
+    return false;
+  }
+
+  async function loadLoginRoles() {
+    const cards = document.querySelectorAll("#loginRoleGrid .login-role-card");
+    cards.forEach((card) => {
+      card.addEventListener("click", () => selectLoginRole(card.dataset.role));
+    });
+  }
+
+  async function selectLoginRole(role) {
+    state.selectedRole = role;
+    document.querySelectorAll("#loginRoleGrid .login-role-card").forEach((card) => {
+      const active = card.dataset.role === role;
+      card.classList.toggle("selected", active);
+      card.setAttribute("aria-checked", String(active));
+    });
+
+    const select = $("#loginAccountSelect");
+    const empty = $("#loginAccountEmpty");
+    const submit = $("#loginSubmitBtn");
+    select.innerHTML = "";
+    select.classList.add("d-none");
+    select.disabled = true;
+    submit.disabled = true;
+    empty.classList.remove("d-none");
+    empty.textContent = "Đang tải tài khoản…";
+
+    try {
+      const payload = await api(`/api/auth/accounts?role=${encodeURIComponent(role)}`);
+      const accounts = payload.data || [];
+      if (!accounts.length) {
+        empty.textContent = "Không có tài khoản cho vai trò này.";
+        return;
+      }
+      const options = ['<option value="">Chọn tài khoản…</option>'];
+      for (const account of accounts) {
+        const inactive = account.AccountStatus !== "ACTIVE";
+        const suffix = inactive ? ` (${account.AccountStatus})` : "";
+        options.push(
+          `<option value="${escapeHtml(account.UserID)}" ${inactive ? "disabled" : ""}>${escapeHtml(account.FullName)} — ${escapeHtml(account.Email)}${escapeHtml(suffix)}</option>`,
+        );
+      }
+      select.innerHTML = options.join("");
+      select.classList.remove("d-none");
+      select.disabled = false;
+      empty.classList.add("d-none");
+      select.addEventListener("change", () => {
+        submit.disabled = !select.value;
+      });
+    } catch (error) {
+      empty.textContent = error.message || "Không tải được tài khoản.";
+    }
+  }
+
+  async function submitLogin() {
+    const role = state.selectedRole;
+    const user_id = Number($("#loginAccountSelect").value);
+    if (!role || !user_id) return;
+    const restore = setBusy($("#loginSubmitBtn"), "Đang đăng nhập…");
+    try {
+      await api("/api/auth/login", { method: "POST", body: { role, user_id } });
+      await enterApp();
+    } catch (error) {
+      notify(error.message, "danger");
+    } finally {
+      restore();
+    }
+  }
+
+  async function logout() {
+    try {
+      await api("/api/auth/logout", { method: "POST" });
+    } catch (error) {
+      // ignore logout network errors
+    }
+    location.reload();
+  }
+
+  async function enterApp() {
+    await checkAuth();
+    if (!state.role) return;
+    await loadCatalog();
+    await Promise.allSettled([
+      loadDashboard(),
+      loadHealth(),
+      loadEnrollments(),
+      loadStatistics(),
+    ]);
+  }
+
+  function applyRoleNavigation() {
+    const role = state.role;
+    document.querySelectorAll(".sidebar .nav-link[data-nav]").forEach((link) => {
+      const allowed = { STUDENT: ["dashboard"], STAFF: ["dashboard"], ADMIN: ["dashboard", "enrollments"] }[role] || [];
+      if (!allowed.includes(link.dataset.nav)) {
+        link.classList.add("d-none");
+      }
+    });
+  }
+
   async function init() {
     attachEvents();
+    const loggedIn = await checkAuth();
+    if (!loggedIn) return;
     await loadCatalog();
     await Promise.allSettled([
       loadDashboard(),

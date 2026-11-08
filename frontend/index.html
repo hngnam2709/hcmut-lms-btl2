@@ -11,10 +11,46 @@
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
+  <div class="login-shell d-none" id="loginScreen">
+    <div class="login-card">
+      <div class="login-header">
+        <span class="brand-mark" aria-hidden="true">BK<br>HCM</span>
+        <h1>HCMUT LMS</h1>
+        <p>Đăng nhập demo — chọn vai trò rồi chọn tài khoản có sẵn. Không dùng mật khẩu.</p>
+      </div>
+      <div class="login-role-grid" id="loginRoleGrid" role="radiogroup" aria-label="Chọn vai trò">
+        <button type="button" class="login-role-card" data-role="STUDENT" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">🎓</span>
+          <span class="name">Sinh viên</span>
+          <span class="desc">Xem khóa học, nộp bài, xem điểm của mình</span>
+        </button>
+        <button type="button" class="login-role-card" data-role="STAFF" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">👩‍🏫</span>
+          <span class="name">Cán bộ</span>
+          <span class="desc">Quản lý lớp phụ trách, tạo bài tập, chấm điểm</span>
+        </button>
+        <button type="button" class="login-role-card" data-role="ADMIN" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">🛡️</span>
+          <span class="name">Quản trị viên</span>
+          <span class="desc">Quản lý tài khoản và danh mục toàn hệ thống</span>
+        </button>
+      </div>
+      <label class="login-account-label" for="loginAccountSelect">Tài khoản</label>
+      <div class="login-account-empty" id="loginAccountEmpty">Hãy chọn một vai trò trước.</div>
+      <select class="login-account-select d-none" id="loginAccountSelect" disabled></select>
+      <div class="login-notice" id="loginNotice">
+        Demo BTL2. Tài khoản bị khóa hoặc vô hiệu hóa (LOCKED/INACTIVE) sẽ không đăng nhập được (RB01).
+      </div>
+      <div class="login-actions">
+        <button type="button" class="btn btn-primary" id="loginSubmitBtn" disabled>Đăng nhập demo</button>
+      </div>
+    </div>
+  </div>
+
   <a class="skip-link" href="#mainContent">Bỏ qua điều hướng</a>
   <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
-  <div class="app-shell">
+  <div class="app-shell" id="appShell" style="display:none">
     <aside class="sidebar" id="sidebar" aria-label="Điều hướng chính">
       <a class="brand" href="#dashboard" aria-label="HCMUT LMS BTL2 - về tổng quan">
         <span class="brand-mark" aria-hidden="true">BK<br>HCM</span>
@@ -62,7 +98,10 @@
             <span class="status-dot" id="healthDot" aria-hidden="true"></span>
             <span id="healthBadgeText">Đang kiểm tra</span>
           </span>
+          <span class="badge-soft active" id="userRoleBadge">—</span>
+          <span class="topbar-user" id="userName">—</span>
           <button class="btn btn-outline-primary btn-sm d-none d-sm-inline-flex" id="refreshDashboardBtn" type="button">↻ Làm mới</button>
+          <button class="btn btn-outline-light btn-sm" id="logoutBtn" type="button">Đăng xuất</button>
         </div>
       </header>
 
