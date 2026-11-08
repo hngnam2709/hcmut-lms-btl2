@@ -95,6 +95,8 @@ Không trả email, avatar hay thông tin cá nhân khác. Với hệ thống th
 - Không có password, MFA, OAuth hay quản lý phiên nâng cao.
 - Không có CSRF token, rate limit, audit log đầy đủ.
 - Demo account list là công khai trong môi trường local.
-- Các endpoint demo dùng chung `/api/enrollments` (CRUD Ghi danh) và `/api/statistics` chưa gắn `require_role`; frontend chỉ gọi chúng từ màn hình Admin. Khi triển khai thật, bọc `@require_role("ADMIN")` cho các endpoint này.
+- `/api/enrollments` (CRUD Ghi danh), `/api/statistics` và `/api/students` đều yêu cầu `ADMIN`.
+- Các endpoint metadata chỉ đọc `/api/semesters`, `/api/sections`, `/api/courses`, `/api/meta` được để công khai cho demo; không chứa dữ liệu cần bảo vệ.
+- `/api/auth/accounts` công khai có chủ đích để chọn tài khoản demo; đã giảm PII.
 - Chưa kiểm thử trên Windows thật; xem `docs/WINDOWS_OFFLINE_GUIDE.md`.
 - Chưa có kiểm thử tải/đồng thời quy mô lớn.

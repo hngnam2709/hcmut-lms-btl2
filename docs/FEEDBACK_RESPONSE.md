@@ -58,9 +58,26 @@ Kiểm tra:
 sed -n '22,50p' backend/api/auth.py
 ```
 
+## P1 — API authorization
+
+**Đã sửa:**
+- `backend/api/enrollments.py`: **toàn bộ** route GET/POST/PUT/DELETE có `@require_role("ADMIN")`.
+- `backend/api/statistics.py`: **toàn bộ** 4 route có `@require_role("ADMIN")`.
+- `backend/api/catalog.py`: `GET /api/students` (có email) chuyển sang `ADMIN`.
+- Các route `/api/admin/*` đã có `ADMIN`; `/api/staff/*` có `STAFF`; `/api/student/*` có `STUDENT`.
+- Metadata chỉ đọc `/api/meta`, `/api/semesters`, `/api/sections`, `/api/courses` vẫn public có chủ đích.
+
+**Test mới:**
+- 401 khi chưa đăng nhập: 5 route enrollment + 4 route statistics + `/api/students`.
+- 403 khi Student/Staff gọi nhầm.
+- 200/201 khi đúng ADMIN.
+- Student/Staff flows giữ nguyên.
+
+Bảng đầy đủ: `docs/API_AUTH_MATRIX.md`.
+
 ## P1 — Số lượng test không thống nhất
 
-**Đã sửa:** tất cả tài liệu dùng **57 passed** và **24/24 smoke**:
+**Đã sửa:** tất cả tài liệu dùng **72 passed** và **31/31 smoke**:
 - `README.md`
 - `docs/TESTING.md`
 - `docs/PROJECT_HANDOVER.md`

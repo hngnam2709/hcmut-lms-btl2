@@ -9,7 +9,7 @@ Cập nhật lần cuối: **2026-11-08**, môi trường Linux, Python 3.12, My
 
 ```text
 $ uv run pytest -q
-57 passed in 2.34s
+72 passed in 2.74s
 ```
 
 Bao gồm:
@@ -17,6 +17,7 @@ Bao gồm:
 - `backend/tests/test_config.py`: SECRET_KEY fail-fast ở production.
 - `backend/tests/test_enrollments_api.py`: CRUD + validation + lỗi procedure.
 - `backend/tests/test_repositories.py`: xác nhận gọi đúng `sp_*` / `fn_*`.
+- `backend/tests/test_enrollments_api.py` / `test_statistics_api.py`: 401 chưa đăng nhập, 403 sai role, 200/201 đúng ADMIN.
 - `backend/tests/test_statistics_api.py`, `test_catalog_api.py`, `test_health.py`, `test_validation.py`, `test_json_provider.py`, `test_frontend.py`.
 
 ## 2. Database verifier
@@ -46,10 +47,10 @@ Các test SQL mới:
 
 ```text
 $ .venv/bin/python scripts/smoke_api.py
-LIVE API SMOKE: PASS (24/24)
+LIVE API SMOKE: PASS (31/31)
 ```
 
-Gồm 14 check public/CRUD + 10 check phân quyền Student/Staff/Admin.
+Gồm public/CRUD + 401/403 + phân quyền Student/Staff/Admin (31 check).
 
 ## 4. Browser E2E (Chromium headless)
 
@@ -60,6 +61,19 @@ Các luồng đã chạy, console/pageerror `[]`:
 - Admin: users/sections, **Ghi danh CRUD**, **Thống kê + 2 function**, data explorer.
 
 Ảnh: `docs/evidence/00-login-*.png` … `16-admin-data.png`.
+
+## 4b. API authorization checks
+
+| Request | Kết quả |
+|---|---|
+| `GET /api/enrollments` không session | **401** |
+| `GET /api/enrollments` với Student | **403** |
+| `GET /api/enrollments` với Admin | **200** |
+| `GET /api/statistics/overview` không session | **401** |
+| `GET /api/statistics/overview` với Student | **403** |
+| `GET /api/statistics/overview` với Admin | **200** |
+
+Chi tiết route: `docs/API_AUTH_MATRIX.md`.
 
 ## 5. Readiness check
 

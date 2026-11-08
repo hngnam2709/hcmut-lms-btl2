@@ -220,9 +220,9 @@ Frontend:
 | Lệnh setup | `setup.bat` |
 | Kết quả `check_environment.bat` | PASS / FAIL |
 | Kết quả `run.bat` | Flask chạy tại `http://127.0.0.1:5000` |
-| Kết quả `uv run pytest` | 57 passed |
+| Kết quả `uv run pytest` | 72 passed |
 | Kết quả `python scripts\verify_database.py` | DATABASE VERIFICATION: PASS |
-| Kết quả `python scripts\smoke_api.py` | LIVE API SMOKE: PASS (24/24) |
+| Kết quả `python scripts\smoke_api.py` | LIVE API SMOKE: PASS (31/31) |
 | Ảnh/log đính kèm | Đường dẫn file |
 
 Checklist:

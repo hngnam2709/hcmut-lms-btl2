@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from backend.api.dependencies import service
+from backend.auth_guard import require_role
 from backend.validation import (
     parse_int,
     parse_optional_int,
@@ -14,6 +15,7 @@ bp = Blueprint("enrollments", __name__, url_prefix="/api/enrollments")
 
 
 @bp.get("")
+@require_role("ADMIN")
 def list_enrollments():
     student_id = parse_optional_int(request.args.get("student_id"), "student_id", min_value=1)
     semester_id = parse_optional_int(request.args.get("semester_id"), "semester_id", min_value=1)
@@ -35,12 +37,14 @@ def list_enrollments():
 
 
 @bp.get("/<int:enrollment_id>")
+@require_role("ADMIN")
 def get_enrollment(enrollment_id: int):
     parse_int(enrollment_id, "enrollment_id", required=True, min_value=1)
     return jsonify({"data": service("enrollment").get(enrollment_id)})
 
 
 @bp.post("")
+@require_role("ADMIN")
 def create_enrollment():
     body = require_json_object()
     student_id = parse_int(body.get("student_id"), "student_id", required=True, min_value=1)
@@ -56,6 +60,7 @@ def create_enrollment():
 
 
 @bp.put("/<int:enrollment_id>")
+@require_role("ADMIN")
 def update_enrollment(enrollment_id: int):
     parse_int(enrollment_id, "enrollment_id", required=True, min_value=1)
     body = require_json_object()
@@ -74,6 +79,7 @@ def update_enrollment(enrollment_id: int):
 
 
 @bp.delete("/<int:enrollment_id>")
+@require_role("ADMIN")
 def delete_enrollment(enrollment_id: int):
     parse_int(enrollment_id, "enrollment_id", required=True, min_value=1)
     result = service("enrollment").delete(enrollment_id)

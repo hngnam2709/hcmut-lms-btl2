@@ -69,7 +69,7 @@ Cả hai được gọi thật qua API `/api/statistics/...` và được kiểm
 
 | Yêu cầu | Hiện thực | Bằng chứng | Trạng thái |
 |---|---|---|---|
-| 3.1 Màn hình thêm/xóa/sửa bảng ở 2.1 | Tab **Quản trị → Ghi danh**: modal thêm/sửa, nút xóa, gọi 3 procedure CRUD | `frontend/assets/app.js` (`renderAdminEnrollments`); `backend/api/enrollments.py`; 57 tests; live smoke 24/24; `docs/CRUD_PROCEDURE_TRACE.md` | **PASS** |
+| 3.1 Màn hình thêm/xóa/sửa bảng ở 2.1 | Tab **Quản trị → Ghi danh**: modal thêm/sửa, nút xóa, gọi 3 procedure CRUD | `frontend/assets/app.js` (`renderAdminEnrollments`); `backend/api/enrollments.py`; 72 tests; live smoke 31/31; `docs/CRUD_PROCEDURE_TRACE.md` | **PASS** |
 | 3.2 Danh sách gọi query procedure; search/filter/sort/validate/error | Bảng ghi danh từ `sp_GetStudentEnrollments`; filter sinh viên/học kỳ/status; sort client-side; sửa/xóa ngay trên bảng; lỗi procedure hiển thị toast | `GET /api/enrollments`; tab Ghi danh; `docs/CRUD_PROCEDURE_TRACE.md` | **PASS** |
 | 3.3 Giao diện cho procedure/hàm khác | Tab **Quản trị → Thống kê** gọi `sp_GetAssignmentStatistics`; nút “Kiểm tra hàm” gọi function completion; nút “Tính điểm trung bình” gọi function average | `frontend/assets/app.js` (`renderAdminStatistics`); `docs/FUNCTION_EVIDENCE.md` | **PASS** |
 | Ứng dụng thực sự kết nối CSDL | Flask kết nối MySQL bằng PyMySQL; health check trả version/database thật | `GET /api/health` trả MySQL 8.4.13; live smoke PASS | **PASS** |
@@ -119,7 +119,7 @@ Xem `docs/TEAM_ASSIGNMENT.md`. Bảng phân công đảm bảo mỗi thành viê
 
 ## 6. Trạng thái tổng hợp
 
-- **Đã kiểm thử tự động:** schema/seed/constraints/triggers/procedures/functions, **53 Python tests**, **live API 24/24** (gồm phân quyền 3 vai trò), **Playwright Chromium** cho các luồng Student/Staff/Admin, frontend static smoke.
+- **Đã kiểm thử tự động:** schema/seed/constraints/triggers/procedures/functions, **72 Python tests**, **live API 31/31** (gồm phân quyền 3 vai trò), **Playwright Chromium** cho các luồng Student/Staff/Admin, frontend static smoke.
 - **Bằng chứng bổ sung:** `docs/ROW_COUNTS.md`, `docs/SCHEMA_INVENTORY.md`, `docs/FUNCTION_EVIDENCE.md`, `docs/TRIGGER_DML_MATRIX.md`, `docs/CRUD_PROCEDURE_TRACE.md`, `docs/QUERY_PROCEDURE_EVIDENCE.md`.
 - **Chưa kiểm thử:** chạy `.bat` trên Windows thật, kiểm thử trên nhiều trình duyệt khác ngoài Chromium, kiểm thử tải/đồng thời quy mô lớn.
 - **Không tuyên bố:** không có xác thực bằng mật khẩu (demo chọn role/account, session cookie), không upload file nhị phân thật, không tích hợp LMS thật.

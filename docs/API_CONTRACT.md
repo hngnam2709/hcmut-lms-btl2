@@ -48,6 +48,8 @@ Base URL local: `http://127.0.0.1:5000`
 | 400 | `invalid_json` | Body không phải JSON object |
 | 400 | `database_rule_violation` | Stored procedure/trigger `SIGNAL` (trùng ghi danh, vượt sĩ số, xóa có điểm, lịch trùng...) |
 | 400 | `constraint_violation` | CHECK/kiểu dữ liệu/độ dài |
+| 401 | `unauthorized` | Chưa đăng nhập |
+| 403 | `forbidden` | Sai role hoặc không sở hữu dữ liệu |
 | 404 | `not_found`, `http_404` | Không tìm thấy resource/endpoint |
 | 409 | `duplicate`, `foreign_key_conflict` | UNIQUE/FK |
 | 422 | `validation_error` | Query/body không hợp lệ |
@@ -56,24 +58,24 @@ Base URL local: `http://127.0.0.1:5000`
 
 ## 2. Endpoint tổng hợp
 
-| Method | Path | Chức năng | Gọi DB |
-|---|---|---|---|
-| GET | `/api/health/live` | Liveness, không kiểm tra DB | Không |
-| GET | `/api/health` | Readiness, kiểm tra MySQL | `SELECT VERSION()` |
-| GET | `/api/meta` | Metadata ứng dụng/status/procedure | Không |
-| GET | `/api/semesters` | Danh sách học kỳ | `SELECT` |
-| GET | `/api/students` | Danh sách sinh viên | `SELECT` |
-| GET | `/api/sections` | Danh sách lớp học phần | `SELECT` |
-| GET | `/api/courses` | Danh sách môn | `SELECT` |
-| GET | `/api/enrollments` | Danh sách ghi danh | `CALL sp_GetStudentEnrollments` |
-| GET | `/api/enrollments/<id>` | Chi tiết một ghi danh | `SELECT` tham số hóa |
-| POST | `/api/enrollments` | Thêm ghi danh | `CALL sp_InsertEnrollment` |
-| PUT | `/api/enrollments/<id>` | Sửa ghi danh | `CALL sp_UpdateEnrollment` |
-| DELETE | `/api/enrollments/<id>` | Xóa ghi danh | `CALL sp_DeleteEnrollment` |
-| GET | `/api/statistics/overview` | Đếm tổng quan | `SELECT` aggregate |
-| GET | `/api/statistics/assignments` | Thống kê bài tập | `CALL sp_GetAssignmentStatistics` |
-| GET | `/api/statistics/assignments/<id>/completion` | Tỷ lệ hoàn thành | `SELECT fn_CalculateAssignmentCompletionRate` |
-| GET | `/api/statistics/enrollments/<id>/average` | Điểm trung bình nội bộ | `SELECT fn_CalculateStudentAverageScore` |
+| Method | Path | Chức năng | Auth | Gọi DB |
+|---|---|---|---|---|
+| GET | `/api/health/live` | Liveness, không kiểm tra DB | Public | Không |
+| GET | `/api/health` | Readiness, kiểm tra MySQL | Public | `SELECT VERSION()` |
+| GET | `/api/meta` | Metadata ứng dụng/status/procedure | Public | Không |
+| GET | `/api/semesters` | Danh sách học kỳ | Public | `SELECT` |
+| GET | `/api/students` | Danh sách sinh viên | ADMIN | `SELECT` |
+| GET | `/api/sections` | Danh sách lớp học phần | Public | `SELECT` |
+| GET | `/api/courses` | Danh sách môn | Public | `SELECT` |
+| GET | `/api/enrollments` | Danh sách ghi danh | ADMIN | `CALL sp_GetStudentEnrollments` |
+| GET | `/api/enrollments/<id>` | Chi tiết một ghi danh | ADMIN | `SELECT` tham số hóa |
+| POST | `/api/enrollments` | Thêm ghi danh | ADMIN | `CALL sp_InsertEnrollment` |
+| PUT | `/api/enrollments/<id>` | Sửa ghi danh | ADMIN | `CALL sp_UpdateEnrollment` |
+| DELETE | `/api/enrollments/<id>` | Xóa ghi danh | ADMIN | `CALL sp_DeleteEnrollment` |
+| GET | `/api/statistics/overview` | Đếm tổng quan | ADMIN | `SELECT` aggregate |
+| GET | `/api/statistics/assignments` | Thống kê bài tập | ADMIN | `CALL sp_GetAssignmentStatistics` |
+| GET | `/api/statistics/assignments/<id>/completion` | Tỷ lệ hoàn thành | ADMIN | `SELECT fn_CalculateAssignmentCompletionRate` |
+| GET | `/api/statistics/enrollments/<id>/average` | Điểm trung bình nội bộ | ADMIN | `SELECT fn_CalculateStudentAverageScore` |
 
 ## 3. Chi tiết endpoint
 
@@ -138,6 +140,8 @@ Trả 200 nếu MySQL sẵn sàng; 503 nếu không.
 ```
 
 ### 3.5 `GET /api/students`
+
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
 
 Query:
 
@@ -214,6 +218,8 @@ Response có `ActiveEnrollmentCount` để hiển thị sĩ số hiện tại.
 
 ### 3.8 `GET /api/enrollments`
 
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
+
 Query:
 
 | Tên | Kiểu | Mặc định | Ghi chú |
@@ -262,6 +268,8 @@ curl "http://127.0.0.1:5000/api/enrollments?student_id=101&semester_id=4&status=
 
 ### 3.9 `GET /api/enrollments/<id>`
 
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
+
 `id` phải là số nguyên dương. Trả 404 nếu không tồn tại.
 
 ```json
@@ -269,6 +277,8 @@ curl "http://127.0.0.1:5000/api/enrollments?student_id=101&semester_id=4&status=
 ```
 
 ### 3.10 `POST /api/enrollments`
+
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
 
 Body:
 
@@ -304,6 +314,8 @@ Các lỗi nghiệp vụ thường gặp (HTTP 400, `database_rule_violation`):
 
 ### 3.11 `PUT /api/enrollments/<id>`
 
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
+
 Body phải có ít nhất một trường:
 
 ```json
@@ -324,6 +336,8 @@ Sinh viên không đổi. Procedure từ chối đổi lớp/rút môn nếu đ�
 
 ### 3.12 `DELETE /api/enrollments/<id>`
 
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
+
 ```json
 {
   "data": {
@@ -342,6 +356,8 @@ Khong the xoa ghi danh da co diem. Hay giu lich su hoc tap.
 
 ### 3.13 `GET /api/statistics/overview`
 
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
+
 ```json
 {
   "data": {
@@ -359,6 +375,8 @@ Khong the xoa ghi danh da co diem. Hay giu lich su hoc tap.
 Số liệu phụ thuộc seed/trạng thái demo tại thời điểm gọi.
 
 ### 3.14 `GET /api/statistics/assignments`
+
+Yêu cầu: session `ADMIN` (401 nếu chưa đăng nhập, 403 nếu sai role).
 
 Query:
 
@@ -392,6 +410,8 @@ Query:
 
 ### 3.15 `GET /api/statistics/assignments/<id>/completion`
 
+Yêu cầu: session `ADMIN`.
+
 ```json
 {
   "data": {
@@ -404,6 +424,8 @@ Query:
 Đây là kết quả thật từ `fn_CalculateAssignmentCompletionRate`. Function trả `0.00` nếu assignment có 0 eligible student; ID không tồn tại sẽ trả lỗi.
 
 ### 3.16 `GET /api/statistics/enrollments/<id>/average`
+
+Yêu cầu: session `ADMIN`.
 
 ```json
 {

@@ -71,45 +71,69 @@ def main() -> int:
           predicate=lambda body: len(body["data"]) >= 5)
     check("sections", "GET", "/api/sections?semester_id=4&status=OPEN", 200,
           predicate=lambda body: len(body["data"]) >= 5)
-    check("enrollment list procedure", "GET",
-          "/api/enrollments?student_id=101&semester_id=4&limit=20", 200,
-          predicate=lambda body: len(body["data"]) >= 2 and "StartTime" in body["data"][0])
-    check("assignment statistics procedure", "GET",
-          "/api/statistics/assignments?semester_id=4&min_submissions=0", 200,
-          predicate=lambda body: len(body["data"]) >= 5)
-    check("completion function", "GET", "/api/statistics/assignments/1/completion", 200,
-          predicate=lambda body: float(body["data"]["completion_rate"]) == 100.0)
-    check("average function", "GET", "/api/statistics/enrollments/1/average", 200,
-          predicate=lambda body: float(body["data"]["average_score"]) == 82.5)
+    check("enrollments require login", "GET", "/api/enrollments", 401,
+          predicate=lambda body: body["error"]["code"] == "unauthorized")
+    check("statistics require login", "GET", "/api/statistics/overview", 401,
+          predicate=lambda body: body["error"]["code"] == "unauthorized")
 
-    created = check("create enrollment", "POST", "/api/enrollments", 201,
-                    payload={"student_id": 107, "section_id": 1, "status": "ACTIVE"},
-                    predicate=lambda body: body["data"]["success"] == 1)
-    enrollment_id = created["data"]["EnrollmentID"]
-    check("get enrollment", "GET", f"/api/enrollments/{enrollment_id}", 200,
-          predicate=lambda body: body["data"]["EnrollmentID"] == enrollment_id)
-    check("update enrollment", "PUT", f"/api/enrollments/{enrollment_id}", 200,
-          payload={"status": "DROPPED"},
-          predicate=lambda body: body["data"]["success"] == 1)
-    check("delete enrollment", "DELETE", f"/api/enrollments/{enrollment_id}", 200,
-          predicate=lambda body: body["data"]["success"] == 1)
-    check("duplicate rejected", "POST", "/api/enrollments", 400,
-          payload={"student_id": 101, "section_id": 1, "status": "ACTIVE"},
-          predicate=lambda body: body["error"]["code"] == "database_rule_violation")
-    check("bad limit rejected", "GET", "/api/enrollments?limit=0", 422,
-          predicate=lambda body: body["error"]["code"] == "validation_error")
-
+    admin = role_session(base, "ADMIN", 301)
     student = role_session(base, "STUDENT", 101)
     staff = role_session(base, "STAFF", 201)
-    admin = role_session(base, "ADMIN", 301)
 
     def role_check(label: str, call, method: str, path: str, expected: int,
-                   payload=None, predicate=None) -> None:
+                   payload=None, predicate=None) -> dict:
         status, body = call(method, path, payload)
         ok = status == expected and (predicate(body) if predicate else True)
         checks.append(ok)
         rendered = json.dumps(body, ensure_ascii=False)[:180]
         print(f"{'PASS' if ok else 'FAIL'} {label}: HTTP {status} {rendered}")
+        return body
+
+    role_check("enrollment list procedure", admin, "GET",
+               "/api/enrollments?student_id=101&semester_id=4&limit=20", 200,
+               predicate=lambda body: len(body["data"]) >= 2 and "StartTime" in body["data"][0])
+    role_check("assignment statistics procedure", admin, "GET",
+               "/api/statistics/assignments?semester_id=4&min_submissions=0", 200,
+               predicate=lambda body: len(body["data"]) >= 5)
+    role_check("completion function", admin, "GET",
+               "/api/statistics/assignments/1/completion", 200,
+               predicate=lambda body: float(body["data"]["completion_rate"]) == 100.0)
+    role_check("average function", admin, "GET",
+               "/api/statistics/enrollments/1/average", 200,
+               predicate=lambda body: float(body["data"]["average_score"]) == 82.5)
+
+    created = role_check("create enrollment", admin, "POST", "/api/enrollments", 201,
+                         payload={"student_id": 107, "section_id": 1, "status": "ACTIVE"},
+                         predicate=lambda body: body["data"]["success"] == 1)
+    enrollment_id = created["data"]["EnrollmentID"]
+    role_check("get enrollment", admin, "GET", f"/api/enrollments/{enrollment_id}", 200,
+               predicate=lambda body: body["data"]["EnrollmentID"] == enrollment_id)
+    role_check("update enrollment", admin, "PUT", f"/api/enrollments/{enrollment_id}", 200,
+               payload={"status": "DROPPED"},
+               predicate=lambda body: body["data"]["success"] == 1)
+    role_check("delete enrollment", admin, "DELETE", f"/api/enrollments/{enrollment_id}", 200,
+               predicate=lambda body: body["data"]["success"] == 1)
+    role_check("duplicate rejected", admin, "POST", "/api/enrollments", 400,
+               payload={"student_id": 101, "section_id": 1, "status": "ACTIVE"},
+               predicate=lambda body: body["error"]["code"] == "database_rule_violation")
+    role_check("bad limit rejected", admin, "GET", "/api/enrollments?limit=0", 422,
+               predicate=lambda body: body["error"]["code"] == "validation_error")
+
+    role_check("student blocked from enrollment API", student, "GET",
+               "/api/enrollments", 403,
+               predicate=lambda body: body["error"]["code"] == "forbidden")
+    role_check("student blocked from statistics API", student, "GET",
+               "/api/statistics/overview", 403,
+               predicate=lambda body: body["error"]["code"] == "forbidden")
+    role_check("student blocked from student-list API", student, "GET",
+               "/api/students", 403,
+               predicate=lambda body: body["error"]["code"] == "forbidden")
+    role_check("staff blocked from enrollment API", staff, "GET",
+               "/api/enrollments", 403,
+               predicate=lambda body: body["error"]["code"] == "forbidden")
+    role_check("staff blocked from statistics API", staff, "GET",
+               "/api/statistics/overview", 403,
+               predicate=lambda body: body["error"]["code"] == "forbidden")
 
     role_check("student profile", student, "GET", "/api/student/profile", 200,
                predicate=lambda body: body["data"]["StudentCode"] == "2210001")

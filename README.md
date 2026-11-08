@@ -8,9 +8,9 @@ Các kết quả dưới đây được chạy trên môi trường phát triể
 
 | Hạng mục | Kết quả | Ghi chú |
 |---|---|---|
-| Python unit/API tests | **57 passed** | `uv run pytest` |
+| Python unit/API tests | **72 passed** | `uv run pytest` |
 | Database verifier | **PASS** | `python3 scripts/verify_database.py` |
-| Live API smoke | **24/24 PASS** | `scripts/smoke_api.py` với Flask + MySQL thật, gồm phân quyền 3 vai trò |
+| Live API smoke | **31/31 PASS** | `scripts/smoke_api.py` với Flask + MySQL thật, gồm phân quyền 3 vai trò |
 | Frontend static smoke | **PASS** | `/`, CSS, JS, Bootstrap local, favicon trả HTTP 200 |
 | Windows `.bat` scripts | **Chưa chạy trên Windows** | Cần kiểm tra lại trên máy Windows trước khi nộp |
 

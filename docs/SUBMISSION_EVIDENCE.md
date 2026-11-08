@@ -31,6 +31,7 @@ Tài liệu này gom các bằng chứng theo đúng rubric để đưa vào bá
 | 3.2 Danh sách + filter/sort/update/delete | UI tab Ghi danh; `GET /api/enrollments` | filter student/semester/status; sort; toast lỗi procedure |
 | 3.3 UI procedure/function khác | UI tab Thống kê; `docs/QUERY_PROCEDURE_EVIDENCE.md` | bảng `sp_GetAssignmentStatistics`; 2 nút gọi function |
 | Kết nối DB thật | `GET /api/health`; `scripts/smoke_api.py` | MySQL 8.4.13, `hcmut_lms` |
+| Phân quyền API | `docs/API_AUTH_MATRIX.md`; `backend/tests/test_enrollments_api.py`, `test_statistics_api.py` | 401/403/200 đúng role |
 
 ## 4. Tài liệu phản hồi feedback
 
@@ -40,7 +41,7 @@ Tài liệu này gom các bằng chứng theo đúng rubric để đưa vào bá
 ## 5. Lệnh chạy lại
 
 ```bash
-uv run pytest -q                         # 57 passed
+uv run pytest -q                         # 72 passed
 .venv/bin/python scripts/verify_database.py
 .venv/bin/python scripts/smoke_api.py
 .venv/bin/python scripts/report_row_counts.py

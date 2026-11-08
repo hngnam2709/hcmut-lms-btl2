@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from backend.api.dependencies import service
+from backend.auth_guard import require_role
 from backend.validation import parse_bool, parse_optional_int, parse_section_status
 
 bp = Blueprint("catalog", __name__, url_prefix="/api")
@@ -14,6 +15,7 @@ def semesters():
 
 
 @bp.get("/students")
+@require_role("ADMIN")
 def students():
     active_only = parse_bool(request.args.get("active_only"), default=True)
     return jsonify({"data": service("catalog").students(active_only=active_only)})

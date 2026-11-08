@@ -6,11 +6,11 @@ Chạy ngày **2026-11-08** trên Linux, Python 3.12, MySQL 8.4.13 (Docker).
 
 | Lớp kiểm thử | Lệnh | Kết quả |
 |---|---|---|
-| Python unit/API | `uv run pytest` | **57 passed** |
-| Clean clone | `git clone` + `uv sync` + `uv run pytest` | **57 passed** |
+| Python unit/API | `uv run pytest` | **72 passed** |
+| Clean clone | `git clone` + `uv sync` + `uv run pytest` | **72 passed** |
 | Coverage backend | `uv run pytest --cov=backend --cov-report=term-missing` | Chạy lại khi cần; không chốt số cũ |
 | Database end-to-end | `python3 scripts/verify_database.py` | **PASS** |
-| Live HTTP smoke | `python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000` | **24/24 PASS** (gồm phân quyền 3 vai trò) |
+| Live HTTP smoke | `python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000` | **31/31 PASS** (gồm phân quyền 3 vai trò) |
 | Frontend static | `curl` `/`, CSS, JS, Bootstrap, favicon | **PASS** |
 | `database/run_all.sql` wrappers | Docker MySQL 8.4 + mount repo, `docker exec -i` | **PASS** (22 bảng / 13 trigger / 5 procedure / 2 function) |
 | Windows `.bat` | Chưa có máy Windows | **Chưa xác minh** |
@@ -110,28 +110,15 @@ Terminal khác:
 python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000
 ```
 
-Script kiểm tra 24 bước:
+Script kiểm tra 31 bước, chia nhóm:
 
-1. health
-2. meta
-3. semesters
-4. sections
-5. enrollment list qua procedure
-6. assignment statistics qua procedure
-7. completion function
-8. average function
-9. create enrollment
-10. get enrollment
-11. update enrollment
-12. delete enrollment
-13. duplicate bị chặn (400)
-14. limit sai bị chặn (422)
-15. student login + profile + sections (chỉ 2 lớp)
-16. student bị chặn section không ghi danh (404) và API Staff (403)
-17. staff login + 3 lớp phụ trách + sinh viên lớp 1
-18. staff bị chặn lớp không phụ trách (403)
-19. admin login + 18 tài khoản + 22 bảng dữ liệu
-20. admin không được chấm điểm (RB13, 403)
+1. **Public:** health, meta, semesters, sections.
+2. **Auth:** 401 khi chưa đăng nhập cho `/api/enrollments` và `/api/statistics/overview`.
+3. **Admin CRUD Ghi danh:** list + filter qua `sp_GetStudentEnrollments`, create/get/update/delete, duplicate bị chặn (400), limit sai (422).
+4. **Admin Thống kê:** `sp_GetAssignmentStatistics`, 2 function completion/average.
+5. **Student:** login, profile, sections (2 lớp), section không ghi danh (404), bị chặn Staff API (403) và enrollment/statistics/students (403).
+6. **Staff:** login, 3 lớp phụ trách, sinh viên lớp 1, lớp không phụ trách (403), bị chặn enrollment/statistics (403).
+7. **Admin:** 18 tài khoản, 22 bảng dữ liệu, không được chấm điểm (RB13, 403).
 
 Script tự xóa enrollment vừa tạo. Chạy lại nhiều lần được.
 

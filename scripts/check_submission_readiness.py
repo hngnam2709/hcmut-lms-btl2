@@ -102,6 +102,24 @@ def main() -> int:
         if "SESSION_COOKIE_SECURE" not in text or "RuntimeError" not in text:
             FAIL.append("backend/session_config.py is missing Secure cookie/fail-fast")
 
+    enrollments = require_file("backend/api/enrollments.py")
+    if enrollments:
+        text = enrollments.read_text()
+        if text.count('@require_role("ADMIN")') != 5:
+            FAIL.append("backend/api/enrollments.py must guard all 5 routes with ADMIN")
+
+    statistics = require_file("backend/api/statistics.py")
+    if statistics:
+        text = statistics.read_text()
+        if text.count('@require_role("ADMIN")') != 4:
+            FAIL.append("backend/api/statistics.py must guard all 4 routes with ADMIN")
+
+    catalog = require_file("backend/api/catalog.py")
+    if catalog:
+        text = catalog.read_text()
+        if "def students" in text and '@require_role("ADMIN")' not in text.split("def students")[0][-80:]:
+            FAIL.append("GET /api/students must require ADMIN")
+
     auth = require_file("backend/api/auth.py")
     if auth:
         text = auth.read_text()
@@ -136,6 +154,7 @@ def main() -> int:
     require_file("docs/SUBMISSION_EVIDENCE.md")
     require_file("docs/FEEDBACK_RESPONSE.md")
     require_file("docs/TEST_RESULTS.md")
+    require_file("docs/API_AUTH_MATRIX.md")
     require_file("database/tests/10_trigger_dml_matrix.sql")
     require_file("database/tests/11_trigger_expected_fail_schedule_update.sql")
     require_file("database/tests/12_function_boundary.sql")

@@ -68,7 +68,7 @@
 
 ```text
 uv run pytest
-→ 57 passed
+→ 72 passed
 
 uv run pytest --cov=backend --cov-report=term-missing
 → TOTAL 86%
@@ -86,7 +86,7 @@ python3 scripts/verify_database.py
   - function smoke đúng
 
 python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000
-→ LIVE API SMOKE: PASS (24/24)
+→ LIVE API SMOKE: PASS (31/31)
 
 curl frontend / assets / Bootstrap local / favicon
 → tất cả HTTP 200
@@ -95,7 +95,7 @@ database/run_all.sql qua Docker + mount repo
 → PASS: 22 bảng, 13 trigger, 5 procedure, 2 function, Assignment=6
 
 git clone <repo> /tmp/hcmut-lms-clean && uv sync && uv run pytest
-→ 57 passed trong checkout sạch
+→ 72 passed trong checkout sạch
 ```
 
 Chi tiết: `docs/TESTING.md`.

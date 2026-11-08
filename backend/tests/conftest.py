@@ -139,3 +139,26 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+def _login_as(client, role: str, user_id: int):
+    with client.session_transaction() as sess:
+        sess.clear()
+        sess["user_id"] = user_id
+        sess["role"] = role
+    return client
+
+
+@pytest.fixture
+def admin_client(client):
+    return _login_as(client, "ADMIN", 301)
+
+
+@pytest.fixture
+def staff_client(client):
+    return _login_as(client, "STAFF", 201)
+
+
+@pytest.fixture
+def student_client(client):
+    return _login_as(client, "STUDENT", 101)
