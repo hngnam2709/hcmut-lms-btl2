@@ -119,3 +119,23 @@ def test_student_quiz_finish_and_files(client):
     files = client.get("/api/student/submissions/11/files")
     assert files.status_code == 200
     assert files.get_json()["data"][0]["FileName"] == "bai-nop.pdf"
+
+def test_accounts_list_does_not_expose_email(client, app):
+    class FakeDB:
+        def fetch_all(self, sql, params=None):
+            return [{
+                "UserID": 101,
+                "FullName": "Nguyen Van An",
+                "AccountStatus": "ACTIVE",
+                "StudentCode": "2210001",
+                "FacultyID": 1,
+            }]
+
+    app.extensions["db"] = FakeDB()
+    response = client.get("/api/auth/accounts?role=STUDENT")
+    assert response.status_code == 200
+    rows = response.get_json()["data"]
+    assert rows
+    assert set(rows[0]) == {"UserID", "FullName", "AccountStatus", "StudentCode", "FacultyID"}
+
+

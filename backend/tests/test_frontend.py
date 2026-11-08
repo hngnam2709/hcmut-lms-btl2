@@ -25,6 +25,8 @@ def test_frontend_js_is_served(client):
     assert b"/api/auth/login" in response.data
     assert b"/api/student/sections" in response.data
     assert b"/api/admin/data/tables" in response.data
+    assert b"renderAdminEnrollments" in response.data
+    assert b"renderAdminStatistics" in response.data
 
 
 def test_frontend_js_has_well_formed_markup(client):

@@ -27,21 +27,21 @@ def auth_accounts():
     
     if role == "STUDENT":
         rows = db.fetch_all("""
-            SELECT u.UserID, u.FullName, u.Email, u.AvatarURL, u.AccountStatus,
-                   s.StudentCode, s.FacultyID
+            SELECT u.UserID, u.FullName, u.AccountStatus, s.StudentCode, s.FacultyID
             FROM Student s JOIN UserAccount u ON s.UserID = u.UserID
             ORDER BY u.FullName
         """)
     elif role == "STAFF":
         rows = db.fetch_all("""
-            SELECT u.UserID, u.FullName, u.Email, u.AvatarURL, u.AccountStatus,
+            SELECT u.UserID, u.FullName, u.AccountStatus,
                    NULL AS StudentCode, s.FacultyID
             FROM Staff s JOIN UserAccount u ON s.UserID = u.UserID
             ORDER BY u.FullName
         """)
     elif role == "ADMIN":
         rows = db.fetch_all("""
-            SELECT u.UserID, u.FullName, u.Email, u.AvatarURL, u.AccountStatus
+            SELECT u.UserID, u.FullName, u.AccountStatus,
+                   NULL AS StudentCode, NULL AS FacultyID
             FROM Admin s JOIN UserAccount u ON s.UserID = u.UserID
             ORDER BY u.FullName
         """)

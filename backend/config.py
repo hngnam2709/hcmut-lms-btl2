@@ -15,8 +15,15 @@ def _as_bool(value: str | None, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+DEFAULT_SECRET_KEY = "dev-only-change-this-secret"
+INSECURE_SECRET_KEYS = {DEFAULT_SECRET_KEY, "replace-with-a-random-value"}
+
+
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-this-secret")
+    DEFAULT_SECRET_KEY = DEFAULT_SECRET_KEY
+    INSECURE_SECRET_KEYS = INSECURE_SECRET_KEYS
+    SECRET_KEY = os.getenv("SECRET_KEY") or DEFAULT_SECRET_KEY
+    APP_ENV = os.getenv("APP_ENV", "local").strip().lower()
     MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
     MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
     MYSQL_USER = os.getenv("MYSQL_USER", "root")
