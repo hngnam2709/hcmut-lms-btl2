@@ -197,7 +197,7 @@ Xem hướng dẫn đầy đủ tại [`docs/WINDOWS_OFFLINE_GUIDE.md`](docs/WIN
 | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Kịch bản demo và câu hỏi bảo vệ |
 | [`SECURITY.md`](SECURITY.md) | Bảo mật, secret, giới hạn demo |
 
-## Ghi chú học thuật
+## Ghi chú
 
 - `Assignment.SubmissionCount` là **cột vật lý có chủ đích** để đáp ứng yêu cầu trigger cho thuộc tính dẫn xuất; BTL1 mô tả nó là derived. Quyết định này được ghi rõ trong `docs/TECHNICAL_DECISIONS.md`.
 - `fn_CalculateStudentAverageScore` là chỉ số phân tích nội bộ (trung bình phần trăm các assessment đã publish), **không phải** công thức điểm tổng kết chính thức của HCMUT.
