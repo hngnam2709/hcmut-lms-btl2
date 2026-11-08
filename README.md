@@ -8,13 +8,13 @@ Các kết quả dưới đây được chạy trên môi trường phát triể
 
 | Hạng mục | Kết quả | Ghi chú |
 |---|---|---|
-| Python unit/API tests | **53 passed** | `uv run pytest` |
+| Python unit/API tests | **57 passed** | `uv run pytest` |
 | Database verifier | **PASS** | `python3 scripts/verify_database.py` |
 | Live API smoke | **24/24 PASS** | `scripts/smoke_api.py` với Flask + MySQL thật, gồm phân quyền 3 vai trò |
 | Frontend static smoke | **PASS** | `/`, CSS, JS, Bootstrap local, favicon trả HTTP 200 |
 | Windows `.bat` scripts | **Chưa chạy trên Windows** | Cần kiểm tra lại trên máy Windows trước khi nộp |
 
-Chi tiết và giới hạn được ghi trong [`docs/TESTING.md`](docs/TESTING.md) và [`docs/PROJECT_HANDOVER.md`](docs/PROJECT_HANDOVER.md).
+Chi tiết và giới hạn được ghi trong [`docs/TESTING.md`](docs/TESTING.md), [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md) và [`docs/PROJECT_HANDOVER.md`](docs/PROJECT_HANDOVER.md).
 
 ## Tính năng chính
 

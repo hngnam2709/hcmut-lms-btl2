@@ -32,7 +32,12 @@ Tài liệu này gom các bằng chứng theo đúng rubric để đưa vào bá
 | 3.3 UI procedure/function khác | UI tab Thống kê; `docs/QUERY_PROCEDURE_EVIDENCE.md` | bảng `sp_GetAssignmentStatistics`; 2 nút gọi function |
 | Kết nối DB thật | `GET /api/health`; `scripts/smoke_api.py` | MySQL 8.4.13, `hcmut_lms` |
 
-## 4. Lệnh chạy lại
+## 4. Tài liệu phản hồi feedback
+
+- `docs/FEEDBACK_RESPONSE.md` — đối chiếu từng điểm P0/P1 với commit hiện tại.
+- `docs/TEST_RESULTS.md` — output test thật, nguồn chuẩn cho số liệu.
+
+## 5. Lệnh chạy lại
 
 ```bash
 uv run pytest -q                         # 57 passed
