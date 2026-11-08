@@ -7,13 +7,15 @@ Example:
 from __future__ import annotations
 
 import argparse
+import http.cookiejar
 import json
 import sys
 import urllib.error
 import urllib.request
 
 
-def request(base_url: str, method: str, path: str, payload: dict | None = None):
+def request(base_url: str, method: str, path: str, payload: dict | None = None,
+            opener: urllib.request.OpenerDirector | None = None):
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     req = urllib.request.Request(
         base_url.rstrip("/") + path,
@@ -21,11 +23,28 @@ def request(base_url: str, method: str, path: str, payload: dict | None = None):
         method=method,
         headers={"Content-Type": "application/json", "Accept": "application/json"},
     )
+    open_url = (opener.open if opener else urllib.request.urlopen)
     try:
-        with urllib.request.urlopen(req, timeout=15) as response:
+        with open_url(req, timeout=15) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         return exc.code, json.loads(exc.read().decode("utf-8"))
+
+
+def role_session(base_url: str, role: str, user_id: int):
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+    )
+
+    def call(method: str, path: str, payload: dict | None = None):
+        return request(base_url, method, path, payload, opener)
+
+    status, body = call(
+        "POST", "/api/auth/login", {"role": role, "user_id": user_id}
+    )
+    if status != 200:
+        raise RuntimeError(f"Login failed for {role}: HTTP {status} {body}")
+    return call
 
 
 def main() -> int:
@@ -79,6 +98,44 @@ def main() -> int:
           predicate=lambda body: body["error"]["code"] == "database_rule_violation")
     check("bad limit rejected", "GET", "/api/enrollments?limit=0", 422,
           predicate=lambda body: body["error"]["code"] == "validation_error")
+
+    student = role_session(base, "STUDENT", 101)
+    staff = role_session(base, "STAFF", 201)
+    admin = role_session(base, "ADMIN", 301)
+
+    def role_check(label: str, call, method: str, path: str, expected: int,
+                   payload=None, predicate=None) -> None:
+        status, body = call(method, path, payload)
+        ok = status == expected and (predicate(body) if predicate else True)
+        checks.append(ok)
+        rendered = json.dumps(body, ensure_ascii=False)[:180]
+        print(f"{'PASS' if ok else 'FAIL'} {label}: HTTP {status} {rendered}")
+
+    role_check("student profile", student, "GET", "/api/student/profile", 200,
+               predicate=lambda body: body["data"]["StudentCode"] == "2210001")
+    role_check("student sections", student, "GET", "/api/student/sections", 200,
+               predicate=lambda body: len(body["data"]) == 2)
+    role_check("student isolated section", student, "GET", "/api/student/sections/4", 404,
+               predicate=lambda body: body["error"]["code"] == "not_found")
+    role_check("student blocked from staff API", student, "GET", "/api/staff/sections", 403,
+               predicate=lambda body: body["error"]["code"] == "forbidden")
+
+    role_check("staff sections", staff, "GET", "/api/staff/sections", 200,
+               predicate=lambda body: len(body["data"]) == 3)
+    role_check("staff section students", staff, "GET",
+               "/api/staff/sections/1/students", 200,
+               predicate=lambda body: len(body["data"]) >= 4)
+    role_check("staff isolated section", staff, "GET",
+               "/api/staff/sections/3/students", 403,
+               predicate=lambda body: body["error"]["code"] == "forbidden")
+
+    role_check("admin users", admin, "GET", "/api/admin/users", 200,
+               predicate=lambda body: len(body["data"]) >= 18)
+    role_check("admin data explorer", admin, "GET", "/api/admin/data/tables", 200,
+               predicate=lambda body: len(body["data"]) == 22)
+    role_check("admin cannot grade", admin, "POST", "/api/staff/sections/1/grades", 403,
+               payload={"enrollment_id": 1, "assessment_id": 1, "score": 5},
+               predicate=lambda body: body["error"]["code"] == "forbidden")
 
     passed = sum(checks)
     print(f"\nLIVE API SMOKE: {'PASS' if all(checks) else 'FAIL'} ({passed}/{len(checks)})")
