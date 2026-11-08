@@ -20,4 +20,3 @@ package = false
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
-addopts = "-q"
