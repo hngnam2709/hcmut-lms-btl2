@@ -321,8 +321,9 @@
       for (const account of accounts) {
         const inactive = account.AccountStatus !== "ACTIVE";
         const suffix = inactive ? ` (${account.AccountStatus})` : "";
+        const detail = account.StudentCode || (role === "STAFF" ? "Cán bộ" : role === "ADMIN" ? "Quản trị" : "");
         options.push(
-          `<option value="${escapeHtml(account.UserID)}" ${inactive ? "disabled" : ""}>${escapeHtml(account.FullName)} — ${escapeHtml(account.Email)}${escapeHtml(suffix)}</option>`,
+          `<option value="${escapeHtml(account.UserID)}" ${inactive ? "disabled" : ""}>${escapeHtml(account.FullName)}${detail ? ` — ${escapeHtml(detail)}` : ""}${escapeHtml(suffix)}</option>`,
         );
       }
       select.innerHTML = options.join("");
@@ -1884,6 +1885,8 @@
     { id: "courses", label: "Môn học" },
     { id: "components", label: "Thành phần" },
     { id: "sections", label: "Lớp học phần" },
+    { id: "enrollments", label: "Ghi danh" },
+    { id: "statistics", label: "Thống kê" },
     { id: "data", label: "Dữ liệu" },
   ];
 
@@ -1934,6 +1937,10 @@
         renderAdminComponents(content, refs);
       } else if (tab === "sections") {
         renderAdminSections(content, refs);
+      } else if (tab === "enrollments") {
+        await renderAdminEnrollments(content, refs);
+      } else if (tab === "statistics") {
+        await renderAdminStatistics(content, refs);
       } else if (tab === "data") {
         renderAdminData(content);
       }
@@ -1949,8 +1956,17 @@
 
   function refreshAdmin(tab) {
     state.adminCache.references = null;
-    if (tab === "sections" || tab === "data") state.adminCache.sections = null;
+    if (["sections", "data", "enrollments", "statistics"].includes(tab)) {
+      state.adminCache.sections = null;
+    }
     return loadAdminTab(tab);
+  }
+
+  async function ensureAdminSections() {
+    if (state.adminCache.sections) return state.adminCache.sections;
+    const payload = await api("/api/admin/sections");
+    state.adminCache.sections = payload.data || [];
+    return state.adminCache.sections;
   }
 
   /* -------- users ---------------------------------------------------- */
@@ -2337,6 +2353,295 @@
         restore();
       }
     });
+  }
+
+  /* -------- enrollments (BTL2 3.1 / 3.2) ----------------------------- */
+  function enrollmentSectionLabel(section) {
+    return `${semesterLabel(section)} · ${section.CourseCode} ${section.SectionCode}`;
+  }
+
+  async function renderAdminEnrollments(content, refs) {
+    content.innerHTML = loadingState("Đang tải danh sách ghi danh…");
+    try {
+      const sections = await ensureAdminSections();
+      const filters = state.enrollmentFilters || (state.enrollmentFilters = {
+        student_id: "", semester_id: "", status: "", sort: "id", limit: 100,
+      });
+      const params = new URLSearchParams({ limit: String(filters.limit), offset: "0" });
+      if (filters.student_id) params.set("student_id", filters.student_id);
+      if (filters.semester_id) params.set("semester_id", filters.semester_id);
+      if (filters.status) params.set("status", filters.status);
+      const rows = (await api(`/api/enrollments?${params.toString()}`)).data || [];
+      const sorters = {
+        id: (a, b) => Number(b.EnrollmentID) - Number(a.EnrollmentID),
+        name: (a, b) => String(a.StudentName).localeCompare(String(b.StudentName), "vi"),
+        section: (a, b) => String(a.SectionCode).localeCompare(String(b.SectionCode), "vi"),
+        status: (a, b) => String(a.EnrollmentStatus).localeCompare(String(b.EnrollmentStatus)),
+      };
+      const sorted = [...rows].sort(sorters[filters.sort] || sorters.id);
+      const students = refs.users.filter((user) => user.Role === "STUDENT");
+      content.innerHTML = `
+        ${adminToolbar("Ghi danh", `${formatNumber(rows.length)} bản ghi từ sp_GetStudentEnrollments`, "Thêm ghi danh", "addEnrollmentBtn")}
+        <div class="panel mb-3"><div class="panel-body tight">
+          <div class="filter-grid">
+            <div>
+              <label class="form-label" for="enrollFilterStudent">Sinh viên</label>
+              <select class="form-select" id="enrollFilterStudent">
+                <option value="">Tất cả sinh viên</option>
+                ${students.map((student) => `<option value="${escapeHtml(student.UserID)}" ${String(student.UserID) === String(filters.student_id) ? "selected" : ""}>${escapeHtml(student.StudentCode || "")} — ${escapeHtml(student.FullName)}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="enrollFilterSemester">Học kỳ</label>
+              <select class="form-select" id="enrollFilterSemester">
+                <option value="">Tất cả học kỳ</option>
+                ${refs.semesters.map((semester) => `<option value="${escapeHtml(semester.SemesterID)}" ${String(semester.SemesterID) === String(filters.semester_id) ? "selected" : ""}>${escapeHtml(semesterLabel(semester))}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="enrollFilterStatus">Trạng thái</label>
+              <select class="form-select" id="enrollFilterStatus">
+                <option value="">Tất cả trạng thái</option>
+                ${["ACTIVE", "DROPPED", "COMPLETED"].map((status) => `<option value="${status}" ${status === filters.status ? "selected" : ""}>${status}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="enrollSort">Sắp xếp</label>
+              <select class="form-select" id="enrollSort">
+                <option value="id" ${filters.sort === "id" ? "selected" : ""}>Mới nhất</option>
+                <option value="name" ${filters.sort === "name" ? "selected" : ""}>Tên sinh viên</option>
+                <option value="section" ${filters.sort === "section" ? "selected" : ""}>Mã lớp</option>
+                <option value="status" ${filters.sort === "status" ? "selected" : ""}>Trạng thái</option>
+              </select>
+            </div>
+          </div>
+          <p class="cell-muted mt-2 mb-0">Bộ lọc gửi trực tiếp vào <code>sp_GetStudentEnrollments</code>. Thêm/sửa/xóa gọi <code>sp_InsertEnrollment</code>, <code>sp_UpdateEnrollment</code>, <code>sp_DeleteEnrollment</code>; lỗi nghiệp vụ từ procedure hiển thị trong toast.</p>
+        </div></div>
+        <div class="panel"><div class="table-responsive"><table class="table">
+          <thead><tr><th>ID</th><th>Sinh viên</th><th>Lớp học phần</th><th>Học kỳ</th><th>Ngày ghi danh</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+          <tbody>${sorted.length ? sorted.map((row) => `<tr>
+            <td class="mono">${escapeHtml(row.EnrollmentID)}</td>
+            <td class="cell-primary">${escapeHtml(row.StudentName)}<div class="cell-muted">${escapeHtml(row.StudentCode)}</div></td>
+            <td>${escapeHtml(row.SectionCode)}<div class="cell-muted">${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</div></td>
+            <td class="cell-muted">${escapeHtml(semesterLabel(row))}</td>
+            <td class="cell-muted">${escapeHtml(formatDate(row.EnrollmentDate))}</td>
+            <td>${statusBadge(row.EnrollmentStatus)}</td>
+            <td class="text-end text-nowrap">
+              <button class="btn btn-light btn-sm" data-edit-enrollment="${escapeHtml(row.EnrollmentID)}">Sửa</button>
+              <button class="btn btn-light btn-sm" data-del-enrollment="${escapeHtml(row.EnrollmentID)}">Xóa</button>
+            </td>
+          </tr>`).join("") : '<tr><td colspan="7" class="cell-muted">Không có ghi danh phù hợp.</td></tr>'}</tbody>
+        </table></div></div>`;
+      const bindFilter = (id, key) => {
+        const element = $(`#${id}`);
+        if (!element) return;
+        element.addEventListener("change", () => {
+          filters[key] = element.value;
+          renderAdminEnrollments(content, refs);
+        });
+      };
+      bindFilter("enrollFilterStudent", "student_id");
+      bindFilter("enrollFilterSemester", "semester_id");
+      bindFilter("enrollFilterStatus", "status");
+      bindFilter("enrollSort", "sort");
+      $("#addEnrollmentBtn").addEventListener("click", () => openEnrollmentModal(refs, sections));
+      content.querySelectorAll("[data-edit-enrollment]").forEach((button) => {
+        const row = rows.find((item) => Number(item.EnrollmentID) === Number(button.dataset.editEnrollment));
+        button.addEventListener("click", () => openEnrollmentModal(refs, sections, row));
+      });
+      content.querySelectorAll("[data-del-enrollment]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const row = rows.find((item) => Number(item.EnrollmentID) === Number(button.dataset.delEnrollment));
+          confirmAction(
+            `Xóa ghi danh <strong>#${escapeHtml(button.dataset.delEnrollment)}</strong>${row ? ` của ${escapeHtml(row.StudentName)}` : ""}?<br>Procedure sẽ từ chối nếu ghi danh đã có điểm.`,
+            async () => {
+              try {
+                await api(`/api/enrollments/${button.dataset.delEnrollment}`, { method: "DELETE" });
+                notify("Đã xóa ghi danh.", "success");
+                await refreshAdmin("enrollments");
+              } catch (error) {
+                notify(error.message, "danger");
+              }
+            },
+            { danger: true, label: "Xóa" },
+          );
+        });
+      });
+    } catch (error) {
+      content.innerHTML = errorState(error.message);
+    }
+  }
+
+  function openEnrollmentModal(refs, sections, row = null) {
+    const students = refs.users.filter((user) => user.Role === "STUDENT");
+    const studentOptions = students.map((student) => ({
+      value: student.UserID,
+      label: `${student.StudentCode || ""} — ${student.FullName}`,
+    }));
+    const sectionOptions = sections.map((section) => ({
+      value: section.SectionID,
+      label: enrollmentSectionLabel(section),
+    }));
+    const statusOptions = ["ACTIVE", "DROPPED", "COMPLETED"].map((status) => ({ value: status, label: status }));
+    openModal({
+      title: row ? `Sửa ghi danh #${row.EnrollmentID}` : "Thêm ghi danh",
+      size: "lg",
+      body: `${row ? `<p class="cell-muted">Sinh viên: <strong>${escapeHtml(row.StudentName)}</strong> · ${escapeHtml(row.StudentCode)}</p>` : ""}
+        <div class="field-grid">
+          ${row ? "" : field({ id: "enrollStudent", label: "Sinh viên", type: "select", value: studentOptions[0]?.value, options: studentOptions, span: true })}
+          ${field({ id: "enrollSection", label: "Lớp học phần", type: "select", value: row?.SectionID || sectionOptions[0]?.value, options: sectionOptions, span: true })}
+          ${field({ id: "enrollStatus", label: "Trạng thái", type: "select", value: row?.EnrollmentStatus || "ACTIVE", options: statusOptions })}
+        </div>`,
+      footer: modalFooter("saveEnrollment"),
+    });
+    $("#saveEnrollment").addEventListener("click", async () => {
+      const body = {
+        section_id: Number($("#enrollSection").value),
+        status: $("#enrollStatus").value,
+      };
+      if (!row) {
+        body.student_id = Number($("#enrollStudent").value);
+        if (!body.student_id) {
+          notify("Chọn sinh viên cần ghi danh.", "warning");
+          return;
+        }
+      }
+      if (!body.section_id) {
+        notify("Chọn lớp học phần.", "warning");
+        return;
+      }
+      const restore = setBusy($("#saveEnrollment"), "Đang lưu…");
+      try {
+        if (row) await api(`/api/enrollments/${row.EnrollmentID}`, { method: "PUT", body });
+        else await api("/api/enrollments", { method: "POST", body });
+        notify(row ? "Đã cập nhật ghi danh." : "Đã thêm ghi danh.", "success");
+        closeModal();
+        await refreshAdmin("enrollments");
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  /* -------- statistics (BTL2 3.3) ------------------------------------ */
+  async function renderAdminStatistics(content, refs) {
+    content.innerHTML = loadingState("Đang tính thống kê…");
+    try {
+      const sections = await ensureAdminSections();
+      const filters = state.statisticsFilters || (state.statisticsFilters = {
+        section_id: "", semester_id: "", min_submissions: 0,
+      });
+      const params = new URLSearchParams({ min_submissions: String(filters.min_submissions) });
+      if (filters.section_id) params.set("section_id", filters.section_id);
+      if (filters.semester_id) params.set("semester_id", filters.semester_id);
+      const rows = (await api(`/api/statistics/assignments?${params.toString()}`)).data || [];
+      const enrollments = (await api("/api/enrollments?limit=200")).data || [];
+      content.innerHTML = `
+        ${adminToolbar("Thống kê bài tập", `${formatNumber(rows.length)} bài tập từ sp_GetAssignmentStatistics`, null, null)}
+        <div class="panel mb-3"><div class="panel-body tight">
+          <div class="filter-grid">
+            <div>
+              <label class="form-label" for="statFilterSection">Lớp học phần</label>
+              <select class="form-select" id="statFilterSection">
+                <option value="">Tất cả lớp</option>
+                ${sections.map((section) => `<option value="${escapeHtml(section.SectionID)}" ${String(section.SectionID) === String(filters.section_id) ? "selected" : ""}>${escapeHtml(enrollmentSectionLabel(section))}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="statFilterSemester">Học kỳ</label>
+              <select class="form-select" id="statFilterSemester">
+                <option value="">Tất cả học kỳ</option>
+                ${refs.semesters.map((semester) => `<option value="${escapeHtml(semester.SemesterID)}" ${String(semester.SemesterID) === String(filters.semester_id) ? "selected" : ""}>${escapeHtml(semesterLabel(semester))}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="statMinSubmissions">Số bài nộp tối thiểu (HAVING)</label>
+              <input class="form-control" id="statMinSubmissions" type="number" min="0" value="${escapeHtml(filters.min_submissions)}">
+            </div>
+          </div>
+          <p class="cell-muted mt-2 mb-0">Bộ lọc WHERE/HAVING được truyền vào <code>sp_GetAssignmentStatistics</code>. Nút “Kiểm tra hàm” gọi <code>fn_CalculateAssignmentCompletionRate</code> cho từng bài tập.</p>
+        </div></div>
+        <div class="panel"><div class="table-responsive"><table class="table">
+          <thead><tr><th>Bài tập</th><th>Lớp</th><th>Môn</th><th>HK</th><th>Đủ ĐK</th><th>Đã nộp</th><th>Thiếu</th><th>Tỷ lệ</th><th>Hàm</th><th>Nộp cuối</th></tr></thead>
+          <tbody>${rows.length ? rows.map((row) => `<tr>
+            <td class="cell-primary">${escapeHtml(row.AssignmentTitle)}<div class="cell-muted">#${escapeHtml(row.AssignmentID)}</div></td>
+            <td>${escapeHtml(row.SectionCode)}</td>
+            <td>${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</td>
+            <td class="cell-muted">${escapeHtml(`${row.AcademicYear} · HK${row.TermNo}`)}</td>
+            <td class="mono">${formatNumber(row.EligibleStudentCount)}</td>
+            <td class="mono">${formatNumber(row.SubmittedStudentCount)}</td>
+            <td class="mono">${formatNumber(row.MissingStudentCount)}</td>
+            <td class="mono">${formatNumber(row.CompletionRate)}%</td>
+            <td><button class="btn btn-light btn-sm" data-check-completion="${escapeHtml(row.AssignmentID)}">Kiểm tra hàm</button> <span class="cell-muted" id="completion-${escapeHtml(row.AssignmentID)}"></span></td>
+            <td class="cell-muted">${escapeHtml(formatDate(row.LastSubmittedAt))}</td>
+          </tr>`).join("") : '<tr><td colspan="10" class="cell-muted">Không có bài tập phù hợp bộ lọc.</td></tr>'}</tbody>
+        </table></div></div>
+        <div class="panel mt-3"><div class="panel-body">
+          <div class="toolbar"><div><strong>fn_CalculateStudentAverageScore</strong> <span class="cell-muted">tính điểm trung bình từ Grade đã công bố</span></div></div>
+          <div class="filter-grid">
+            <div>
+              <label class="form-label" for="averageEnrollment">Ghi danh</label>
+              <select class="form-select" id="averageEnrollment">${enrollments.map((row) => `<option value="${escapeHtml(row.EnrollmentID)}">${escapeHtml(row.StudentCode)} — ${escapeHtml(row.StudentName)} · ${escapeHtml(row.SectionCode)}</option>`).join("")}</select>
+            </div>
+            <div class="d-flex align-items-end">
+              <button class="btn btn-pink" id="checkAverageBtn">Tính điểm trung bình</button>
+            </div>
+          </div>
+          <p class="mt-2 mb-0">Kết quả: <strong id="averageResult">—</strong></p>
+        </div></div>`;
+      const bindFilter = (id, key, numeric = false) => {
+        const element = $(`#${id}`);
+        if (!element) return;
+        const eventName = element.tagName === "INPUT" ? "change" : "change";
+        element.addEventListener(eventName, () => {
+          filters[key] = numeric ? Number(element.value) || 0 : element.value;
+          renderAdminStatistics(content, refs);
+        });
+      };
+      bindFilter("statFilterSection", "section_id");
+      bindFilter("statFilterSemester", "semester_id");
+      bindFilter("statMinSubmissions", "min_submissions", true);
+      content.querySelectorAll("[data-check-completion]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const target = $(`#completion-${button.dataset.checkCompletion}`);
+          const restore = setBusy(button, "…");
+          try {
+            const payload = await api(`/api/statistics/assignments/${button.dataset.checkCompletion}/completion`);
+            const rate = Number(payload.data.completion_rate || 0);
+            if (target) target.textContent = `${formatNumber(rate)}%`;
+            notify(`fn_CalculateAssignmentCompletionRate = ${formatNumber(rate)}%`, "success");
+          } catch (error) {
+            notify(error.message, "danger");
+          } finally {
+            restore();
+          }
+        });
+      });
+      const averageButton = $("#checkAverageBtn");
+      if (averageButton) {
+        averageButton.addEventListener("click", async () => {
+          const enrollmentId = Number($("#averageEnrollment").value);
+          if (!enrollmentId) {
+            notify("Chọn ghi danh cần tính điểm.", "warning");
+            return;
+          }
+          const restore = setBusy(averageButton, "Đang tính…");
+          try {
+            const payload = await api(`/api/statistics/enrollments/${enrollmentId}/average`);
+            const average = Number(payload.data.average_score || 0);
+            $("#averageResult").textContent = `${formatNumber(average)}%`;
+            notify(`fn_CalculateStudentAverageScore = ${formatNumber(average)}%`, "success");
+          } catch (error) {
+            notify(error.message, "danger");
+          } finally {
+            restore();
+          }
+        });
+      }
+    } catch (error) {
+      content.innerHTML = errorState(error.message);
+    }
   }
 
   /* -------- data explorer -------------------------------------------- */
