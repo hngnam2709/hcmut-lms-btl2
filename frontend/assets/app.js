@@ -760,12 +760,345 @@
 
   function applyRoleNavigation() {
     const role = state.role;
-    document.querySelectorAll(".sidebar .nav-link[data-nav]").forEach((link) => {
-      const allowed = { STUDENT: ["dashboard"], STAFF: ["dashboard"], ADMIN: ["dashboard", "enrollments"] }[role] || [];
-      if (!allowed.includes(link.dataset.nav)) {
-        link.classList.add("d-none");
-      }
+    const navItems = {
+      STUDENT: [
+        { id: "dashboard", glyph: "◫", label: "Tổng quan" },
+        { id: "courses", glyph: "▤", label: "Khóa học của tôi" },
+      ],
+      STAFF: [
+        { id: "dashboard", glyph: "◫", label: "Tổng quan" },
+        { id: "sections", glyph: "▤", label: "Lớp tôi dạy" },
+      ],
+      ADMIN: [
+        { id: "dashboard", glyph: "◫", label: "Tổng quan" },
+        { id: "admin", glyph: "⚙", label: "Quản trị" },
+        { id: "enrollments", glyph: "↔", label: "Ghi danh" },
+        { id: "statistics", glyph: "▤", label: "Thống kê bài tập" },
+        { id: "tools", glyph: "ƒ", label: "Hàm & quy trình" },
+        { id: "about", glyph: "ⓘ", label: "Kiến trúc" },
+      ],
+    }[role] || [];
+
+    const nav = $("#sidebarNav");
+    nav.innerHTML = navItems
+      .map(
+        (item, i) => `<a class="nav-link ${i === 0 ? "active" : ""}" href="#${item.id}" data-nav="${item.id}">
+          <span class="nav-glyph" aria-hidden="true">${item.glyph}</span> ${item.label}</a>`,
+      )
+      .join("");
+
+    // Show/hide legacy sections based on role.
+    const legacyIds = ["enrollments", "statistics", "tools", "about"];
+    legacyIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = role === "ADMIN" ? "" : "none";
     });
+    const ws = $("#roleWorkspace");
+    ws.style.display = role === "ADMIN" ? "none" : "";
+
+    document.querySelectorAll("#sidebarNav .nav-link[href^='#']").forEach((link) => {
+      link.addEventListener("click", () => setActiveNav(link.dataset.nav));
+    });
+
+    if (role === "STUDENT") renderStudentWorkspace();
+    if (role === "STAFF") renderStaffWorkspace();
+    if (role === "ADMIN") renderAdminWorkspace();
+  }
+
+  // ===== Role workspaces =====
+  function sectionCard(row) {
+    return `<div class="col-md-6 col-xl-4"><div class="panel course-card" data-section-id="${escapeHtml(row.SectionID)}" style="cursor:pointer">
+      <div class="course-thumb"></div>
+      <div class="panel-body">
+        <div class="cell-primary">${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</div>
+        <div class="cell-muted">${escapeHtml(row.SectionCode)} · ${escapeHtml(row.ComponentType)} · ${escapeHtml(row.RoomCode)}</div>
+        <div class="cell-muted">${dayName(row.DayOfWeek)} ${formatTime(row.StartTime)}–${formatTime(row.EndTime)}</div>
+        <div class="cell-muted">${escapeHtml(row.AcademicYear)} · HK${escapeHtml(row.TermNo)}</div>
+      </div>
+    </div></div>`;
+  }
+
+  async function renderStudentWorkspace() {
+    const inner = $("#roleWorkspaceInner");
+    inner.innerHTML = `<div class="section-heading"><div><h2>Khóa học của tôi</h2><p>Các lớp bạn đã ghi danh. Bấm vào lớp để xem chi tiết.</p></div></div>
+      <div class="row g-3" id="studentCourses"></div>
+      <div id="studentDetail" class="mt-3"></div>`;
+    try {
+      const payload = await api("/api/student/sections");
+      const rows = payload.data || [];
+      const container = $("#studentCourses");
+      container.innerHTML = rows.length
+        ? rows.map(sectionCard).join("")
+        : '<div class="col-12"><div class="empty-state"><strong>Chưa có khóa học</strong></div></div>';
+      container.querySelectorAll("[data-section-id]").forEach((card) => {
+        card.addEventListener("click", () => loadStudentSection(card.dataset.sectionId));
+      });
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  async function loadStudentSection(sectionId) {
+    const detail = $("#studentDetail");
+    detail.innerHTML = '<div class="panel"><div class="panel-body">Đang tải lớp…</div></div>';
+    try {
+      const [sec, ann, res, asg, grd] = await Promise.allSettled([
+        api(`/api/student/sections/${sectionId}`),
+        api(`/api/student/sections/${sectionId}/announcements`),
+        api(`/api/student/sections/${sectionId}/resources`),
+        api(`/api/student/sections/${sectionId}/assessments`),
+        api("/api/student/grades"),
+      ]);
+      const section = sec.status === "fulfilled" ? sec.value.data : {};
+      detail.innerHTML = studentSectionHtml(section, ann, res, asg, grd);
+      detail.querySelectorAll("[data-submit-assignment]").forEach((btn) => {
+        btn.addEventListener("click", () => submitStudentAssignment(btn.dataset.submitAssignment));
+      });
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  function listValue(promise, field) {
+    return promise.status === "fulfilled" ? promise.value.data || [] : [];
+  }
+
+  function studentSectionHtml(section, ann, res, asg, grd) {
+    const announcements = listValue(ann);
+    const resources = listValue(res);
+    const assessments = listValue(asg);
+    const grades = listValue(grd);
+    const gradeRows = grades
+      .filter((g) => Number(g.EnrollmentID) || true)
+      .slice(0, 50)
+      .map(
+        (g) => `<tr><td>${escapeHtml(g.Title)}</td><td>${escapeHtml(g.SectionCode)}</td>
+          <td class="text-end">${formatNumber(g.Score)}/${formatNumber(g.MaxScore)}</td>
+          <td class="text-end">${formatPercent((g.Score / g.MaxScore) * 100)}</td></tr>`,
+      )
+      .join("");
+    const asgRows = assessments
+      .map((a) => {
+        const isAssignment = a.AssessmentType === "ASSIGNMENT";
+        const due = isAssignment ? `Hạn: ${formatDate(a.DueDate)}` : `Đóng: ${formatDate(a.CloseTime)} · ${a.DurationMinutes} phút`;
+        return `<div class="list-group-item d-flex justify-content-between align-items-center">
+          <div><div class="cell-primary">${escapeHtml(a.Title)}</div>
+          <div class="cell-muted">${isAssignment ? "Bài tập" : "Quiz"} · ${due} · Điểm tối đa ${formatNumber(a.MaxScore)}</div></div>
+          <div class="text-end">
+            <div>${a.Score != null ? `${formatNumber(a.Score)}/${formatNumber(a.MaxScore)}` : "Chưa chấm"}</div>
+            ${isAssignment ? `<button class="btn btn-sm btn-outline-primary mt-1" data-submit-assignment="${escapeHtml(a.AssessmentID)}">Nộp bài</button>` : ""}
+          </div></div>`;
+      })
+      .join("");
+    return `<div class="panel">
+      <div class="panel-header"><div><h3 class="panel-title">${escapeHtml(section.CourseCode)} · ${escapeHtml(section.CourseName)}</h3>
+        <p class="panel-subtitle">${escapeHtml(section.SectionCode)} · ${escapeHtml(section.ComponentType)} · ${escapeHtml(section.InstructorName || "Chưa có giảng viên")}</p></div>
+        ${statusBadge(section.EnrollmentStatus)}</div>
+      <div class="panel-body">
+        <h4 class="h6">Thông báo</h4>
+        ${announcements.length ? announcements.map((a) => `<div class="mb-2"><strong>${escapeHtml(a.Title)}</strong><div class="cell-muted">${formatDate(a.PostedAt)}</div><div>${escapeHtml(a.Content)}</div></div>`).join("") : '<div class="cell-muted">Không có thông báo.</div>'}
+        <hr>
+        <h4 class="h6">Tài liệu</h4>
+        ${resources.length ? `<ul class="note-list">${resources.map((r) => `<li><strong>${escapeHtml(r.Title)}</strong> <span class="cell-muted">(${escapeHtml(r.ResourceType)})</span> — ${escapeHtml(r.ResourceURL)}</li>`).join("")}</ul>` : '<div class="cell-muted">Không có tài liệu.</div>'}
+        <hr>
+        <h4 class="h6">Bài tập & Quiz</h4>
+        <div class="list-group">${asgRows || '<div class="cell-muted">Không có hoạt động đánh giá.</div>'}</div>
+        <hr>
+        <h4 class="h6">Điểm của tôi</h4>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Hoạt động</th><th>Lớp</th><th class="text-end">Điểm</th><th class="text-end">%</th></tr></thead>
+        <tbody>${gradeRows || '<tr><td colspan="4" class="cell-muted">Chưa có điểm.</td></tr>'}</tbody></table></div>
+      </div></div>`;
+  }
+
+  async function submitStudentAssignment(assessmentId) {
+    const fileUrl = window.prompt("Tên tệp (metadata, không upload thật):", "bai-nop.pdf");
+    if (fileUrl === null) return;
+    try {
+      await api(`/api/student/assignments/${assessmentId}/submissions`, {
+        method: "POST",
+        body: { file_name: fileUrl, file_url: "/uploads/" + fileUrl, file_size: 1024 },
+      });
+      notify("Đã nộp bài.", "success");
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  async function renderStaffWorkspace() {
+    const inner = $("#roleWorkspaceInner");
+    inner.innerHTML = `<div class="section-heading"><div><h2>Lớp tôi dạy</h2><p>Các lớp bạn là giảng viên phụ trách chính.</p></div></div>
+      <div class="row g-3" id="staffSections"></div>
+      <div id="staffDetail" class="mt-3"></div>`;
+    try {
+      const payload = await api("/api/staff/sections");
+      const rows = payload.data || [];
+      const container = $("#staffSections");
+      container.innerHTML = rows.length
+        ? rows.map(sectionCard).join("")
+        : '<div class="col-12"><div class="empty-state"><strong>Chưa có lớp phụ trách</strong></div></div>';
+      container.querySelectorAll("[data-section-id]").forEach((card) => {
+        card.addEventListener("click", () => loadStaffSection(card.dataset.sectionId));
+      });
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  async function loadStaffSection(sectionId) {
+    const detail = $("#staffDetail");
+    detail.innerHTML = '<div class="panel"><div class="panel-body">Đang tải…</div></div>';
+    try {
+      const [students, ann, res, asg, subs, grd] = await Promise.allSettled([
+        api(`/api/staff/sections/${sectionId}/students`),
+        api(`/api/staff/sections/${sectionId}/announcements`),
+        api(`/api/staff/sections/${sectionId}/resources`),
+        api(`/api/staff/sections/${sectionId}/assessments`),
+        api(`/api/staff/sections/${sectionId}/submissions`),
+        api(`/api/staff/sections/${sectionId}/grades`),
+      ]);
+      detail.innerHTML = staffSectionHtml(sectionId, students, ann, res, asg, subs, grd);
+      attachStaffActions(sectionId);
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  function staffSectionHtml(sectionId, students, ann, res, asg, subs, grd) {
+    const studentRows = listValue(students).map((s) => `<tr><td>${escapeHtml(s.StudentName)}</td><td>${escapeHtml(s.StudentCode)}</td><td>${statusBadge(s.EnrollmentStatus)}</td></tr>`).join("");
+    const annRows = listValue(ann).map((a) => `<tr><td>${escapeHtml(a.Title)}</td><td>${formatDate(a.PostedAt)}</td><td class="text-end"><button class="btn btn-sm btn-outline-danger" data-del-ann="${escapeHtml(a.AnnouncementID)}">Xóa</button></td></tr>`).join("");
+    const resRows = listValue(res).map((r) => `<tr><td>${escapeHtml(r.Title)}</td><td>${escapeHtml(r.ResourceType)}</td><td>${escapeHtml(r.ResourceURL)}</td><td class="text-end"><button class="btn btn-sm btn-outline-danger" data-unpost="${escapeHtml(r.ResourceID)}">Gỡ</button></td></tr>`).join("");
+    const asgRows = listValue(asg).map((a) => `<tr><td>${escapeHtml(a.Title)}</td><td>${escapeHtml(a.AssessmentType)}</td><td class="text-end">${formatNumber(a.MaxScore)}</td><td class="text-end"><button class="btn btn-sm btn-outline-danger" data-del-asg="${escapeHtml(a.AssessmentID)}">Xóa</button></td></tr>`).join("");
+    const subRows = listValue(subs).map((s) => `<tr><td>${escapeHtml(s.StudentName)}</td><td>${escapeHtml(s.AssignmentTitle)}</td><td>Lần ${escapeHtml(s.AttemptNo)}</td><td>${s.Score != null ? formatNumber(s.Score) : "—"}</td>
+      <td class="text-end"><button class="btn btn-sm btn-outline-primary" data-grade-sub="${escapeHtml(s.SubmissionID)}">Chấm</button></td></tr>`).join("");
+    const gradeRows = listValue(grd).map((g) => `<tr><td>${escapeHtml(g.StudentName)}</td><td>${escapeHtml(g.AssessmentTitle)}</td><td class="text-end">${formatNumber(g.Score)}</td><td>${g.IsPublished ? "Đã công bố" : "Ẩn"}</td></tr>`).join("");
+    return `<div class="panel">
+      <div class="panel-header"><h3 class="panel-title">Quản lý lớp #${escapeHtml(sectionId)}</h3></div>
+      <div class="panel-body">
+        <div class="row g-3">
+          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Sinh viên</h4></div>
+            <div class="table-responsive"><table class="table"><thead><tr><th>Tên</th><th>MSSV</th><th>Trạng thái</th></tr></thead><tbody>${studentRows || '<tr><td colspan="3" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
+          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Thông báo</h4><button class="btn btn-sm btn-primary" data-add-ann>+ Thêm</button></div>
+            <div class="table-responsive"><table class="table"><thead><tr><th>Tiêu đề</th><th>Đăng lúc</th><th></th></tr></thead><tbody>${annRows || '<tr><td colspan="3" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
+          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Tài liệu</h4><button class="btn btn-sm btn-primary" data-add-res>+ Thêm</button></div>
+            <div class="table-responsive"><table class="table"><thead><tr><th>Tiêu đề</th><th>Loại</th><th>URL</th><th></th></tr></thead><tbody>${resRows || '<tr><td colspan="4" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
+          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Bài tập & Quiz</h4><button class="btn btn-sm btn-primary" data-add-asg>+ Thêm</button></div>
+            <div class="table-responsive"><table class="table"><thead><tr><th>Tiêu đề</th><th>Loại</th><th class="text-end">Điểm tối đa</th><th></th></tr></thead><tbody>${asgRows || '<tr><td colspan="4" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
+          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Bài nộp</h4></div>
+            <div class="table-responsive"><table class="table"><thead><tr><th>Sinh viên</th><th>Bài tập</th><th>Lần</th><th>Điểm</th><th></th></tr></thead><tbody>${subRows || '<tr><td colspan="5" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
+          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Điểm</h4></div>
+            <div class="table-responsive"><table class="table"><thead><tr><th>Sinh viên</th><th>Hoạt động</th><th class="text-end">Điểm</th><th>Trạng thái</th></tr></thead><tbody>${gradeRows || '<tr><td colspan="4" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
+        </div>
+      </div></div>`;
+  }
+
+  function attachStaffActions(sectionId) {
+    const inner = $("#roleWorkspaceInner");
+    inner.querySelectorAll("[data-del-ann]").forEach((btn) => btn.addEventListener("click", async () => {
+      try { await api(`/api/staff/announcements/${btn.dataset.delAnn}`, { method: "DELETE" }); notify("Đã xóa thông báo."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
+    }));
+    inner.querySelectorAll("[data-unpost]").forEach((btn) => btn.addEventListener("click", async () => {
+      try { await api(`/api/staff/sections/${sectionId}/resources/${btn.dataset.unpost}`, { method: "DELETE" }); notify("Đã gỡ tài liệu."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
+    }));
+    inner.querySelectorAll("[data-del-asg]").forEach((btn) => btn.addEventListener("click", async () => {
+      try { await api(`/api/staff/assessments/${btn.dataset.delAsg}`, { method: "DELETE" }); notify("Đã xóa assessment."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
+    }));
+    inner.querySelectorAll("[data-grade-sub]").forEach((btn) => btn.addEventListener("click", async () => {
+      const score = window.prompt("Nhập điểm cho bài nộp:", "");
+      if (score === null) return;
+      try { await api(`/api/staff/submissions/${btn.dataset.gradeSub}/grade`, { method: "PATCH", body: { score: Number(score) } }); notify("Đã chấm bài."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
+    }));
+    inner.querySelector("[data-add-ann]")?.addEventListener("click", () => {
+      const title = window.prompt("Tiêu đề thông báo:", "");
+      if (title === null) return;
+      const content = window.prompt("Nội dung:", "") || "";
+      api(`/api/staff/sections/${sectionId}/announcements`, { method: "POST", body: { title, content } }).then(() => { notify("Đã thêm thông báo."); loadStaffSection(sectionId); }).catch((e) => notify(e.message, "danger"));
+    });
+    inner.querySelector("[data-add-res]")?.addEventListener("click", () => {
+      const title = window.prompt("Tiêu đề tài liệu:", "");
+      if (title === null) return;
+      const url = window.prompt("URL:", "/resources/file.pdf") || "/resources/file.pdf";
+      api(`/api/staff/sections/${sectionId}/resources`, { method: "POST", body: { title, description: "", resource_type: "DOCUMENT", resource_url: url, display_order: 0 } }).then(() => { notify("Đã thêm tài liệu."); loadStaffSection(sectionId); }).catch((e) => notify(e.message, "danger"));
+    });
+    inner.querySelector("[data-add-asg]")?.addEventListener("click", () => {
+      const title = window.prompt("Tiêu đề bài tập:", "");
+      if (title === null) return;
+      api(`/api/staff/sections/${sectionId}/assignments`, { method: "POST", body: { title, description: "", max_score: 10, max_attempts: 3, open_date: "2026-11-01 00:00:00", due_date: "2026-12-31 23:59:59", allow_late: true, attachments: [] } }).then(() => { notify("Đã thêm bài tập."); loadStaffSection(sectionId); }).catch((e) => notify(e.message, "danger"));
+    });
+  }
+
+  async function renderAdminWorkspace() {
+    const inner = $("#roleWorkspaceInner");
+    inner.innerHTML = `<div class="section-heading"><div><h2>Quản trị</h2><p>Quản lý tài khoản, danh mục và khám phá dữ liệu.</p></div></div>
+      <ul class="nav nav-pills gap-2 mb-3" id="adminTabs">
+        <li class="nav-item"><button class="nav-link active" data-admin-tab="users">Người dùng</button></li>
+        <li class="nav-item"><button class="nav-link" data-admin-tab="faculties">Khoa</button></li>
+        <li class="nav-item"><button class="nav-link" data-admin-tab="semesters">Học kỳ</button></li>
+        <li class="nav-item"><button class="nav-link" data-admin-tab="courses">Môn học</button></li>
+        <li class="nav-item"><button class="nav-link" data-admin-tab="components">Thành phần</button></li>
+        <li class="nav-item"><button class="nav-link" data-admin-tab="sections">Lớp học phần</button></li>
+        <li class="nav-item"><button class="nav-link" data-admin-tab="data">Dữ liệu</button></li>
+      </ul>
+      <div id="adminTabContent"></div>`;
+    $("#adminTabs").querySelectorAll("[data-admin-tab]").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        $("#adminTabs").querySelectorAll("[data-admin-tab]").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        loadAdminTab(tab.dataset.adminTab);
+      });
+    });
+    await loadAdminTab("users");
+  }
+
+  async function loadAdminTab(tab) {
+    const content = $("#adminTabContent");
+    content.innerHTML = '<div class="panel"><div class="panel-body">Đang tải…</div></div>';
+    try {
+      if (tab === "users") {
+        const users = (await api("/api/admin/users")).data || [];
+        content.innerHTML = `<div class="panel"><div class="table-responsive"><table class="table"><thead><tr><th>ID</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th class="text-end">Khóa/Mở</th></tr></thead>
+          <tbody>${users.map((u) => `<tr><td>${escapeHtml(u.UserID)}</td><td>${escapeHtml(u.FullName)}</td><td>${escapeHtml(u.Email)}</td><td>${escapeHtml(u.Role)}</td><td>${statusBadge(u.AccountStatus)}</td>
+          <td class="text-end"><button class="btn btn-sm ${u.AccountStatus === "ACTIVE" ? "btn-outline-danger" : "btn-outline-success"}" data-toggle-status="${escapeHtml(u.UserID)}" data-status="${u.AccountStatus === "ACTIVE" ? "LOCKED" : "ACTIVE"}">${u.AccountStatus === "ACTIVE" ? "Khóa" : "Mở khóa"}</button></td></tr>`).join("")}</tbody></table></div></div>`;
+        content.querySelectorAll("[data-toggle-status]").forEach((btn) => btn.addEventListener("click", async () => {
+          try { await api(`/api/admin/users/${btn.dataset.toggleStatus}/status`, { method: "PATCH", body: { status: btn.dataset.status } }); notify("Đã cập nhật trạng thái."); loadAdminTab("users"); } catch (e) { notify(e.message, "danger"); }
+        }));
+      } else if (tab === "faculties") {
+        const rows = (await api("/api/admin/faculties")).data || [];
+        content.innerHTML = genericTable(["FacultyID", "FacultyName", "FacultyNameEN"], rows);
+      } else if (tab === "semesters") {
+        const rows = (await api("/api/admin/semesters")).data || [];
+        content.innerHTML = genericTable(["SemesterID", "AcademicYear", "TermNo", "StartDate", "EndDate"], rows);
+      } else if (tab === "courses") {
+        const rows = (await api("/api/admin/courses")).data || [];
+        content.innerHTML = genericTable(["CourseID", "CourseCode", "CourseName", "Credits", "FacultyName"], rows);
+      } else if (tab === "components") {
+        const rows = (await api("/api/admin/components")).data || [];
+        content.innerHTML = genericTable(["ComponentID", "CourseCode", "ComponentType", "ComponentName"], rows);
+      } else if (tab === "sections") {
+        const rows = (await api("/api/admin/sections")).data || [];
+        content.innerHTML = genericTable(["SectionID", "SectionCode", "CourseCode", "ComponentType", "AcademicYear", "TermNo", "InstructorName", "Capacity", "SectionStatus"], rows);
+      } else if (tab === "data") {
+        const tables = (await api("/api/admin/data/tables")).data || [];
+        const options = tables.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+        content.innerHTML = `<div class="panel"><div class="panel-body">
+          <label class="form-label">Chọn bảng</label>
+          <select class="form-select" id="exploreTable">${options}</select>
+          <div class="mt-3" id="exploreResult"><span class="cell-muted">Chọn bảng để xem dữ liệu.</span></div></div></div>`;
+        $("#exploreTable").addEventListener("change", async () => {
+          const table = $("#exploreTable").value;
+          const rows = (await api(`/api/admin/data/${table}?limit=50`)).data || [];
+          $("#exploreResult").innerHTML = genericTable(Object.keys(rows[0] || {}), rows);
+        });
+      }
+    } catch (error) {
+      content.innerHTML = `<div class="empty-state"><strong>Lỗi</strong><span>${escapeHtml(error.message)}</span></div>`;
+    }
+  }
+
+  function genericTable(columns, rows) {
+    if (!columns.length) return '<div class="cell-muted">Không có dữ liệu.</div>';
+    const head = columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("");
+    const body = rows.map((r) => `<tr>${columns.map((c) => `<td>${escapeHtml(r[c] ?? "")}</td>`).join("")}</tr>`).join("");
+    return `<div class="panel"><div class="table-responsive"><table class="table"><thead><tr>${head}</tr></thead><tbody>${body || '<tr><td class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div>`;
   }
 
   async function init() {

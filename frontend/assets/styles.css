@@ -424,6 +424,10 @@ body {
 /* App shell: hide sidebar on login */
 .login-mode .app-shell { display: none !important; }
 
+/* Course cards */
+.course-card { overflow: hidden; }
+.course-thumb { height: 6px; background: linear-gradient(135deg, #f8a9c4, #e85d8a); }
+
 @media (max-width: 640px) {
   .login-role-grid { grid-template-columns: 1fr; }
 }
