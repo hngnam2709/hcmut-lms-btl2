@@ -72,3 +72,50 @@ def test_staff_cannot_access_student(client):
         sess["role"] = "STAFF"
     response = client.get("/api/student/sections")
     assert response.status_code == 403
+
+
+def test_student_profile_and_catalog(client):
+    with client.session_transaction() as sess:
+        sess["user_id"] = 101
+        sess["role"] = "STUDENT"
+    profile = client.get("/api/student/profile")
+    assert profile.status_code == 200
+    assert profile.get_json()["data"]["StudentCode"] == "2210001"
+
+    catalog = client.get("/api/student/catalog-sections")
+    assert catalog.status_code == 200
+    assert catalog.get_json()["data"][0]["SectionID"] == 2
+
+
+def test_student_enroll_and_drop(client):
+    with client.session_transaction() as sess:
+        sess["user_id"] = 101
+        sess["role"] = "STUDENT"
+    enrolled = client.post("/api/student/enrollments", json={"section_id": 2})
+    assert enrolled.status_code == 201
+    assert enrolled.get_json()["data"]["section_id"] == 2
+
+    dropped = client.patch("/api/student/enrollments/5/drop")
+    assert dropped.status_code == 200
+    assert dropped.get_json()["data"]["enrollment_id"] == 5
+
+
+def test_student_enroll_requires_section(client):
+    with client.session_transaction() as sess:
+        sess["user_id"] = 101
+        sess["role"] = "STUDENT"
+    response = client.post("/api/student/enrollments", json={})
+    assert response.status_code == 422
+
+
+def test_student_quiz_finish_and_files(client):
+    with client.session_transaction() as sess:
+        sess["user_id"] = 101
+        sess["role"] = "STUDENT"
+    finished = client.patch("/api/student/quiz-attempts/7/finish", json={"score": 8.5})
+    assert finished.status_code == 200
+    assert finished.get_json()["data"]["score"] == 8.5
+
+    files = client.get("/api/student/submissions/11/files")
+    assert files.status_code == 200
+    assert files.get_json()["data"][0]["FileName"] == "bai-nop.pdf"

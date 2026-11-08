@@ -1,25 +1,164 @@
 (() => {
   "use strict";
 
-  const state = {
-    students: [],
-    semesters: [],
-    sections: [],
-    courses: [],
-    enrollments: [],
-    statistics: [],
-    defaultSemesterId: null,
-    deleteTarget: null,
-    sectionMap: new Map(),
-    studentMap: new Map(),
-    user: null,
-    role: null,
-    selectedRole: null,
-  };
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
   const ROLE_LABELS = { STUDENT: "Sinh viên", STAFF: "Cán bộ", ADMIN: "Quản trị viên" };
 
-  const $ = (selector) => document.querySelector(selector);
+  const state = {
+    user: null,
+    role: null,
+    selectedRole: null,
+    courses: null,
+    profile: null,
+    grades: null,
+    viewMode: "list",
+    search: "",
+    courseFilter: "all",
+    courseSort: "name",
+    courseTab: "overview",
+    adminTab: "users",
+    adminCache: {},
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Icons                                                               */
+  /* ------------------------------------------------------------------ */
+  const ICONS = {
+    graduation: '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/>',
+    users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
+    bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+    message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+    "chevron-right": '<path d="m9 18 6-6-6-6"/>',
+    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    more: '<circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+    megaphone: '<path d="m3 11 18-5v12L3 13v-2Z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+    book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    "arrow-right": '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',
+    award: '<circle cx="12" cy="8" r="6"/><path d="m8.2 13.2-1.7 8 5.5-3 5.5 3-1.7-8"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>',
+  };
+
+  function hydrateIcons(root = document) {
+    $$("[data-icon]", root).forEach((node) => {
+      const name = node.getAttribute("data-icon");
+      const path = ICONS[name];
+      if (!path) return;
+      node.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+    });
+  }
+
+  function icon(name, width = 18) {
+    const path = ICONS[name] || "";
+    return `<svg viewBox="0 0 24 24" width="${width}" height="${width}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Helpers                                                             */
+  /* ------------------------------------------------------------------ */
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function initials(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function formatNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toLocaleString("vi-VN", { maximumFractionDigits: 2 }) : "—";
+  }
+
+  function formatPercent(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "—";
+    return `${number.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`;
+  }
+
+  function formatDate(value) {
+    if (!value) return "—";
+    const text = String(value).replace("T", " ");
+    const [datePart, timePart] = text.split(" ");
+    const pieces = datePart.split("-");
+    if (pieces.length !== 3) return text;
+    const date = `${pieces[2]}/${pieces[1]}/${pieces[0]}`;
+    return timePart ? `${date} ${timePart.slice(0, 5)}` : date;
+  }
+
+  function formatTime(value) {
+    if (!value) return "—";
+    return String(value).slice(0, 5);
+  }
+
+  function dayName(dayOfWeek) {
+    const names = ["", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
+    return names[Number(dayOfWeek)] || `Ngày ${dayOfWeek}`;
+  }
+
+  function semesterLabel(row) {
+    return `${row.AcademicYear || "—"} · HK${row.TermNo ?? "—"}`;
+  }
+
+  function statusBadge(status) {
+    const value = String(status || "").toUpperCase();
+    const known = ["ACTIVE", "DROPPED", "COMPLETED", "OPEN", "CLOSED", "CANCELLED", "LOCKED", "INACTIVE"];
+    const css = known.includes(value) ? value.toLowerCase() : "neutral";
+    return `<span class="badge-soft ${css}">${escapeHtml(value || "—")}</span>`;
+  }
+
+  function thumbVariant(id) {
+    return `v${(Math.abs(Number(id) || 1) % 6) + 1}`;
+  }
+
+  function toMysqlDateTime(value) {
+    if (!value) return "";
+    return String(value).replace("T", " ") + (String(value).length === 16 ? ":00" : "");
+  }
+
+  function notify(message, type = "success") {
+    const container = $("#toastContainer");
+    if (!container) return;
+    const tone = ["success", "danger", "warning", "info"].includes(type) ? type : "info";
+    const wrapper = document.createElement("div");
+    wrapper.className = `toast align-items-center text-bg-${tone} border-0`;
+    wrapper.setAttribute("role", "status");
+    wrapper.setAttribute("aria-live", "polite");
+    wrapper.setAttribute("aria-atomic", "true");
+    wrapper.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">${escapeHtml(message)}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+      </div>`;
+    container.appendChild(wrapper);
+    const toast = new bootstrap.Toast(wrapper, { delay: 4200 });
+    wrapper.addEventListener("hidden.bs.toast", () => wrapper.remove());
+    toast.show();
+  }
 
   class ApiError extends Error {
     constructor(message, status, body) {
@@ -44,90 +183,17 @@
     } catch (error) {
       throw new ApiError("Không kết nối được Flask API. Kiểm tra server.", 0, null);
     }
-
     let payload = null;
     try {
       payload = await response.json();
     } catch (error) {
       payload = null;
     }
-
     if (!response.ok) {
       const message = payload?.error?.message || `Yêu cầu thất bại (HTTP ${response.status}).`;
       throw new ApiError(message, response.status, payload);
     }
     return payload;
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function formatNumber(value) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number.toLocaleString("vi-VN") : "—";
-  }
-
-  function formatPercent(value) {
-    const number = Number(value);
-    return Number.isFinite(number) ? `${number.toLocaleString("vi-VN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%` : "—";
-  }
-
-  function formatDate(value) {
-    if (!value) return "—";
-    const text = String(value).replace("T", " ");
-    const [datePart, timePart] = text.split(" ");
-    const pieces = datePart.split("-");
-    if (pieces.length !== 3) return escapeHtml(text);
-    const date = `${pieces[2]}/${pieces[1]}/${pieces[0]}`;
-    return timePart ? `${date} ${timePart.slice(0, 5)}` : date;
-  }
-
-  function formatTime(value) {
-    if (!value) return "—";
-    return String(value).slice(0, 5);
-  }
-
-  function dayName(dayOfWeek) {
-    const names = ["", "", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
-    return names[Number(dayOfWeek)] || `Ngày ${escapeHtml(dayOfWeek)}`;
-  }
-
-  function semesterLabel(semester) {
-    return `${semester.AcademicYear} · HK${semester.TermNo}`;
-  }
-
-  function statusBadge(status) {
-    const value = String(status || "").toUpperCase();
-    const css = ["ACTIVE", "DROPPED", "COMPLETED", "OPEN", "CLOSED", "CANCELLED"].includes(value)
-      ? value.toLowerCase()
-      : "neutral";
-    return `<span class="badge-soft ${css}">${escapeHtml(value || "—")}</span>`;
-  }
-
-  function notify(message, type = "success") {
-    const container = $("#toastContainer");
-    if (!container) return;
-    const tone = ["success", "danger", "warning", "info"].includes(type) ? type : "info";
-    const wrapper = document.createElement("div");
-    wrapper.className = `toast align-items-center text-bg-${tone} border-0`;
-    wrapper.setAttribute("role", "status");
-    wrapper.setAttribute("aria-live", "polite");
-    wrapper.setAttribute("aria-atomic", "true");
-    wrapper.innerHTML = `
-      <div class="d-flex">
-        <div class="toast-body">${escapeHtml(message)}</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
-      </div>`;
-    container.appendChild(wrapper);
-    const toast = new bootstrap.Toast(wrapper, { delay: 4500 });
-    wrapper.addEventListener("hidden.bs.toast", () => wrapper.remove());
-    toast.show();
   }
 
   function setBusy(button, text) {
@@ -138,512 +204,56 @@
     return () => {
       button.disabled = false;
       button.innerHTML = original;
+      hydrateIcons(button);
     };
   }
 
-  function setOptions(select, items, valueKey, label, placeholder) {
-    if (!select) return;
-    const previous = select.value;
-    const options = [`<option value="">${escapeHtml(placeholder)}</option>`];
-    for (const item of items) {
-      options.push(`<option value="${escapeHtml(item[valueKey])}">${escapeHtml(label(item))}</option>`);
-    }
-    select.innerHTML = options.join("");
-    if (previous && [...select.options].some((option) => option.value === previous)) {
-      select.value = previous;
-    }
+  /* ------------------------------------------------------------------ */
+  /* Modal helpers                                                       */
+  /* ------------------------------------------------------------------ */
+  function openModal({ title, body, footer = "", size = "" }) {
+    $("#appModalTitle").textContent = title;
+    $("#appModalBody").innerHTML = body;
+    $("#appModalFooter").innerHTML = footer;
+    $("#appModalDialog").className =
+      "modal-dialog modal-dialog-centered modal-dialog-scrollable" + (size ? ` modal-${size}` : "");
+    hydrateIcons($("#appModal"));
+    bootstrap.Modal.getOrCreateInstance($("#appModal")).show();
+    return $("#appModalBody");
   }
 
-  function sectionLabel(section) {
-    return `${section.SectionCode} · ${section.AcademicYear} HK${section.TermNo} · ${section.CourseCode}`;
+  function closeModal() {
+    bootstrap.Modal.getOrCreateInstance($("#appModal")).hide();
   }
 
-  function populateFilters() {
-    setOptions(
-      $("#filterStudent"),
-      state.students,
-      "StudentID",
-      (student) => `${student.StudentCode} — ${student.FullName}`,
-      "Tất cả sinh viên",
-    );
-    setOptions(
-      $("#filterSemester"),
-      state.semesters,
-      "SemesterID",
-      semesterLabel,
-      "Tất cả học kỳ",
-    );
-    setOptions(
-      $("#statsSemester"),
-      state.semesters,
-      "SemesterID",
-      semesterLabel,
-      "Tất cả học kỳ",
-    );
-    setOptions(
-      $("#formStudent"),
-      state.students,
-      "StudentID",
-      (student) => `${student.StudentCode} — ${student.FullName}`,
-      "Chọn sinh viên",
-    );
-
-    if (state.defaultSemesterId) {
-      $("#filterSemester").value = String(state.defaultSemesterId);
-      $("#statsSemester").value = String(state.defaultSemesterId);
-    }
-    populateStatsSections();
-    populateFormSections();
-  }
-
-  function populateStatsSections() {
-    const semesterId = Number($("#statsSemester").value) || null;
-    const sections = semesterId
-      ? state.sections.filter((section) => Number(section.SemesterID) === semesterId)
-      : state.sections;
-    setOptions($("#statsSection"), sections, "SectionID", sectionLabel, "Tất cả lớp");
-  }
-
-  function populateFormSections() {
-    setOptions($("#formSection"), state.sections, "SectionID", sectionLabel, "Chọn lớp học phần");
-  }
-
-  async function loadCatalog() {
-    const results = await Promise.allSettled([
-      api("/api/semesters"),
-      api("/api/students"),
-      api("/api/sections"),
-      api("/api/courses"),
-    ]);
-    const [semesters, students, sections, courses] = results;
-
-    if (semesters.status === "fulfilled") state.semesters = semesters.value.data || [];
-    if (students.status === "fulfilled") state.students = students.value.data || [];
-    if (sections.status === "fulfilled") state.sections = sections.value.data || [];
-    if (courses.status === "fulfilled") state.courses = courses.value.data || [];
-
-    state.sectionMap = new Map(state.sections.map((section) => [Number(section.SectionID), section]));
-    state.studentMap = new Map(state.students.map((student) => [Number(student.StudentID), student]));
-    const demo = state.semesters.find(
-      (semester) => semester.AcademicYear === "2026-2027" && Number(semester.TermNo) === 1,
-    );
-    state.defaultSemesterId = demo?.SemesterID || state.semesters[0]?.SemesterID || null;
-    populateFilters();
-
-    const failed = results.filter((result) => result.status === "rejected");
-    if (failed.length) {
-      notify(failed[0].reason?.message || "Không tải được danh mục.", "danger");
-    }
-  }
-
-  async function loadHealth(showToast = false) {
-    try {
-      const payload = await api("/api/health");
-      const info = payload.database || {};
-      $("#healthBadgeText").textContent = "API & DB ổn định";
-      $("#healthDot").className = "status-dot ok";
-      $("#healthPanelDot").className = "status-dot ok";
-      $("#healthPanelText").textContent = "Đang hoạt động";
-      $("#healthVersion").textContent = info.version || "—";
-      $("#healthDatabase").textContent = info.database_name || "—";
-      $("#healthServerTime").textContent = formatDate(info.server_time);
-      $("#healthCheckedAt").textContent = new Date().toLocaleTimeString("vi-VN");
-    } catch (error) {
-      $("#healthBadgeText").textContent = "Mất kết nối";
-      $("#healthDot").className = "status-dot bad";
-      $("#healthPanelDot").className = "status-dot bad";
-      $("#healthPanelText").textContent = "Không kết nối được";
-      $("#healthVersion").textContent = "—";
-      $("#healthDatabase").textContent = "—";
-      $("#healthServerTime").textContent = "—";
-      $("#healthCheckedAt").textContent = new Date().toLocaleTimeString("vi-VN");
-      if (showToast) notify(error.message, "danger");
-    }
-  }
-
-  async function loadDashboard() {
-    try {
-      const payload = await api("/api/statistics/overview");
-      const data = payload.data || {};
-      $("#statStudents").textContent = formatNumber(data.student_count);
-      $("#statSections").textContent = formatNumber(data.section_count);
-      $("#statEnrollments").textContent = formatNumber(data.enrollment_count);
-      $("#statActiveEnrollments").textContent = formatNumber(data.active_enrollment_count);
-      $("#statAssignments").textContent = formatNumber(data.assignment_count);
-      $("#statSubmissions").textContent = formatNumber(data.submission_count);
-      $("#statPublishedGrades").textContent = formatNumber(data.published_grade_count);
-    } catch (error) {
-      notify(error.message, "danger");
-    }
-  }
-
-  async function loadEnrollments() {
-    const params = new URLSearchParams();
-    if ($("#filterStudent").value) params.set("student_id", $("#filterStudent").value);
-    if ($("#filterSemester").value) params.set("semester_id", $("#filterSemester").value);
-    if ($("#filterStatus").value) params.set("status", $("#filterStatus").value);
-    params.set("limit", $("#filterLimit").value || "50");
-    params.set("offset", "0");
-
-    const restore = setBusy($("#refreshEnrollmentsBtn"), "Đang tải…");
-    try {
-      const payload = await api(`/api/enrollments?${params.toString()}`);
-      state.enrollments = payload.data || [];
-      renderEnrollments();
-    } catch (error) {
-      state.enrollments = [];
-      renderEnrollments();
-      notify(error.message, "danger");
-    } finally {
-      restore();
-    }
-  }
-
-  function renderEnrollments() {
-    const rows = state.enrollments;
-    const tbody = $("#enrollmentTableBody");
-    const tableWrap = $("#enrollmentTableWrap");
-    const empty = $("#enrollmentEmpty");
-    $("#enrollmentCount").textContent = `${formatNumber(rows.length)} ghi danh`;
-
-    if (!rows.length) {
-      tbody.innerHTML = "";
-      tableWrap.classList.add("d-none");
-      empty.classList.remove("d-none");
-      return;
-    }
-    tableWrap.classList.remove("d-none");
-    empty.classList.add("d-none");
-    tbody.innerHTML = rows.map((row) => {
-      const schedule = `${dayName(row.DayOfWeek)} · ${formatTime(row.StartTime)}–${formatTime(row.EndTime)}`;
-      return `
-        <tr>
-          <td>
-            <div class="cell-primary">${escapeHtml(row.StudentName)}</div>
-            <div class="cell-muted">${escapeHtml(row.StudentCode)} · ID ${escapeHtml(row.StudentID)}</div>
-          </td>
-          <td>
-            <div class="cell-primary">${escapeHtml(row.SectionCode)}</div>
-            <div class="cell-muted">${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</div>
-            <div class="cell-muted">${escapeHtml(row.ComponentType)} · phòng ${escapeHtml(row.RoomCode)}</div>
-          </td>
-          <td>
-            <div>${escapeHtml(row.AcademicYear)} · HK${escapeHtml(row.TermNo)}</div>
-            <div class="cell-muted">Semester ${escapeHtml(row.SemesterID)}</div>
-          </td>
-          <td>
-            <div>${escapeHtml(schedule)}</div>
-            <div class="cell-muted">Sĩ số tối đa ${escapeHtml(row.Capacity)}</div>
-          </td>
-          <td>${formatDate(row.EnrollmentDate)}</td>
-          <td>${statusBadge(row.EnrollmentStatus)}</td>
-          <td class="text-end text-nowrap">
-            <button class="btn btn-sm btn-outline-primary me-1" type="button" data-action="edit" data-id="${escapeHtml(row.EnrollmentID)}" aria-label="Sửa ghi danh ${escapeHtml(row.EnrollmentID)}">Sửa</button>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete" data-id="${escapeHtml(row.EnrollmentID)}" aria-label="Xóa ghi danh ${escapeHtml(row.EnrollmentID)}">Xóa</button>
-          </td>
-        </tr>`;
-    }).join("");
-  }
-
-  async function loadStatistics() {
-    const params = new URLSearchParams();
-    if ($("#statsSemester").value) params.set("semester_id", $("#statsSemester").value);
-    if ($("#statsSection").value) params.set("section_id", $("#statsSection").value);
-    const minimum = $("#statsMinSubmissions").value.trim();
-    if (minimum !== "") params.set("min_submissions", minimum);
-
-    const restore = setBusy($("#refreshStatsBtn"), "Đang tải…");
-    try {
-      const payload = await api(`/api/statistics/assignments?${params.toString()}`);
-      state.statistics = payload.data || [];
-      renderStatistics();
-    } catch (error) {
-      state.statistics = [];
-      renderStatistics();
-      notify(error.message, "danger");
-    } finally {
-      restore();
-    }
-  }
-
-  function renderStatistics() {
-    const rows = state.statistics;
-    const tbody = $("#statisticsTableBody");
-    const table = $("#statisticsTable");
-    const empty = $("#statisticsEmpty");
-    $("#statsCount").textContent = `${formatNumber(rows.length)} bài tập`;
-
-    if (!rows.length) {
-      tbody.innerHTML = "";
-      table.classList.add("d-none");
-      empty.classList.remove("d-none");
-      return;
-    }
-    table.classList.remove("d-none");
-    empty.classList.add("d-none");
-    tbody.innerHTML = rows.map((row) => {
-      const percent = Math.max(0, Math.min(100, Number(row.CompletionRate) || 0));
-      return `
-        <tr>
-          <td>
-            <div class="cell-primary">${escapeHtml(row.AssignmentTitle)}</div>
-            <div class="cell-muted">Assignment ID ${escapeHtml(row.AssignmentID)}</div>
-          </td>
-          <td>
-            <div>${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</div>
-            <div class="cell-muted">${escapeHtml(row.SectionCode)} · ${escapeHtml(row.AcademicYear)} HK${escapeHtml(row.TermNo)}</div>
-          </td>
-          <td class="text-end">${formatNumber(row.EligibleStudentCount)}</td>
-          <td class="text-end">${formatNumber(row.SubmittedStudentCount)}</td>
-          <td class="text-end">${formatNumber(row.MissingStudentCount)}</td>
-          <td>
-            <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-              <span class="mono" id="row-completion-${escapeHtml(row.AssignmentID)}">${formatPercent(percent)}</span>
-              <span class="cell-muted">${formatNumber(row.SubmissionCount)} lượt</span>
-            </div>
-            <div class="progress-thin" aria-hidden="true"><span id="row-progress-${escapeHtml(row.AssignmentID)}" style="width:${percent}%"></span></div>
-          </td>
-          <td>${formatDate(row.LastSubmittedAt)}</td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary" type="button" data-action="completion" data-id="${escapeHtml(row.AssignmentID)}">Gọi hàm</button>
-          </td>
-        </tr>`;
-    }).join("");
-  }
-
-  function openCreateModal() {
-    $("#enrollmentForm").reset();
-    $("#enrollmentForm").classList.remove("was-validated");
-    $("#enrollmentMode").value = "create";
-    $("#editingEnrollmentId").value = "";
-    $("#enrollmentModalTitle").textContent = "Thêm ghi danh";
-    $("#enrollmentModalSubtitle").textContent = "Procedure sẽ kiểm tra tài khoản, sĩ số và trùng lặp.";
-    $("#formStudent").disabled = false;
-    $("#formStatus").value = "ACTIVE";
-    $("#editStudentHint").classList.add("d-none");
-    populateFormSections();
-    bootstrap.Modal.getOrCreateInstance($("#enrollmentModal")).show();
-  }
-
-  function openEditModal(row) {
-    $("#enrollmentForm").classList.remove("was-validated");
-    $("#enrollmentMode").value = "edit";
-    $("#editingEnrollmentId").value = String(row.EnrollmentID);
-    $("#enrollmentModalTitle").textContent = `Cập nhật ghi danh #${row.EnrollmentID}`;
-    $("#enrollmentModalSubtitle").textContent = "Sinh viên được giữ nguyên; có thể đổi lớp hoặc trạng thái.";
-    $("#formStudent").disabled = true;
-    $("#formStudent").value = String(row.StudentID);
-    $("#formSection").value = String(row.SectionID);
-    $("#formStatus").value = row.EnrollmentStatus;
-    $("#editStudentHint").classList.remove("d-none");
-    bootstrap.Modal.getOrCreateInstance($("#enrollmentModal")).show();
-  }
-
-  async function saveEnrollment(event) {
-    event.preventDefault();
-    const form = $("#enrollmentForm");
-    if (!form.checkValidity()) {
-      form.classList.add("was-validated");
-      return;
-    }
-    const mode = $("#enrollmentMode").value;
-    const enrollmentId = $("#editingEnrollmentId").value;
-    const payload = {
-      section_id: Number($("#formSection").value),
-      status: $("#formStatus").value,
+  function confirmAction(message, onConfirm, { title = "Xác nhận", danger = true, label = "Xác nhận" } = {}) {
+    $("#confirmTitle").textContent = title;
+    $("#confirmBody").innerHTML = message;
+    const yes = $("#confirmYes");
+    yes.className = `btn ${danger ? "btn-danger" : "btn-pink"}`;
+    yes.textContent = label;
+    yes.onclick = async () => {
+      bootstrap.Modal.getOrCreateInstance($("#confirmModal")).hide();
+      await onConfirm();
     };
-    if (mode === "create") payload.student_id = Number($("#formStudent").value);
-
-    const restore = setBusy($("#saveEnrollmentBtn"), "Đang lưu…");
-    try {
-      const result = mode === "create"
-        ? await api("/api/enrollments", { method: "POST", body: payload })
-        : await api(`/api/enrollments/${enrollmentId}`, { method: "PUT", body: payload });
-      bootstrap.Modal.getOrCreateInstance($("#enrollmentModal")).hide();
-      notify(result?.data?.message || "Đã lưu ghi danh.", "success");
-      await Promise.all([loadEnrollments(), loadStatistics(), loadDashboard()]);
-    } catch (error) {
-      notify(error.message, "danger");
-    } finally {
-      restore();
-    }
+    bootstrap.Modal.getOrCreateInstance($("#confirmModal")).show();
   }
 
-  function openDeleteModal(row) {
-    state.deleteTarget = row;
-    $("#deleteTargetText").textContent = `Xóa ghi danh #${row.EnrollmentID} của ${row.StudentName} trong lớp ${row.SectionCode}?`;
-    bootstrap.Modal.getOrCreateInstance($("#deleteModal")).show();
+  function emptyState(title, note = "", glyph = "∅") {
+    return `<div class="empty-state"><div class="empty-glyph" aria-hidden="true">${glyph}</div><strong>${escapeHtml(title)}</strong>${note ? `<span>${escapeHtml(note)}</span>` : ""}</div>`;
   }
 
-  async function confirmDelete() {
-    const target = state.deleteTarget;
-    if (!target) return;
-    const restore = setBusy($("#confirmDeleteBtn"), "Đang xóa…");
-    try {
-      const result = await api(`/api/enrollments/${target.EnrollmentID}`, { method: "DELETE" });
-      bootstrap.Modal.getOrCreateInstance($("#deleteModal")).hide();
-      state.deleteTarget = null;
-      notify(result?.data?.message || "Đã xóa ghi danh.", "success");
-      await Promise.all([loadEnrollments(), loadStatistics(), loadDashboard()]);
-    } catch (error) {
-      notify(error.message, "danger");
-    } finally {
-      restore();
-    }
+  function errorState(message) {
+    return `<div class="empty-state"><div class="empty-glyph" aria-hidden="true">!</div><strong>Không tải được dữ liệu</strong><span>${escapeHtml(message)}</span></div>`;
   }
 
-  async function runCompletion(assignmentId, target, progress) {
-    if (!Number.isInteger(Number(assignmentId)) || Number(assignmentId) <= 0) {
-      notify("Assignment ID phải là số nguyên dương.", "warning");
-      return;
-    }
-    try {
-      const payload = await api(`/api/statistics/assignments/${assignmentId}/completion`);
-      const value = Number(payload?.data?.completion_rate) || 0;
-      const safe = Math.max(0, Math.min(100, value));
-      if (target) target.textContent = formatPercent(safe);
-      if (progress) progress.style.width = `${safe}%`;
-      notify(`Assignment ${assignmentId}: ${formatPercent(safe)} hoàn thành.`, "info");
-    } catch (error) {
-      notify(error.message, "danger");
-    }
+  function loadingState(text = "Đang tải…") {
+    return `<div class="panel"><div class="panel-body text-center cell-muted">${escapeHtml(text)}</div></div>`;
   }
 
-  async function runAverage() {
-    const enrollmentId = $("#calcEnrollmentId").value.trim();
-    if (!Number.isInteger(Number(enrollmentId)) || Number(enrollmentId) <= 0) {
-      notify("Enrollment ID phải là số nguyên dương.", "warning");
-      return;
-    }
-    const restore = setBusy($("#calcAverageBtn"), "Đang tính…");
-    try {
-      const payload = await api(`/api/statistics/enrollments/${enrollmentId}/average`);
-      const value = Number(payload?.data?.average_score) || 0;
-      $("#averageResult").textContent = formatPercent(value);
-      notify(`Enrollment ${enrollmentId}: ${formatPercent(value)}.`, "info");
-    } catch (error) {
-      $("#averageResult").textContent = "—";
-      notify(error.message, "danger");
-    } finally {
-      restore();
-    }
-  }
-
-  async function runToolCompletion() {
-    const assignmentId = $("#calcAssignmentId").value.trim();
-    const restore = setBusy($("#calcCompletionBtn"), "Đang tính…");
-    try {
-      await runCompletion(assignmentId, $("#completionResult"), $("#completionProgress"));
-    } finally {
-      restore();
-    }
-  }
-
-  function attachTableActions() {
-    $("#enrollmentTableBody").addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-action]");
-      if (!button) return;
-      const id = Number(button.dataset.id);
-      const row = state.enrollments.find((item) => Number(item.EnrollmentID) === id);
-      if (!row) return;
-      if (button.dataset.action === "edit") openEditModal(row);
-      if (button.dataset.action === "delete") openDeleteModal(row);
-    });
-
-    $("#statisticsTableBody").addEventListener("click", async (event) => {
-      const button = event.target.closest('button[data-action="completion"]');
-      if (!button) return;
-      const id = button.dataset.id;
-      const restore = setBusy(button, "…");
-      try {
-        await runCompletion(id, $(`#row-completion-${id}`), $(`#row-progress-${id}`));
-      } finally {
-        restore();
-      }
-    });
-  }
-
-  function attachNavigation() {
-    const body = document.body;
-    const menuButton = $("#mobileMenuBtn");
-    const closeSidebar = () => {
-      body.classList.remove("sidebar-open");
-      menuButton.setAttribute("aria-expanded", "false");
-    };
-    menuButton.addEventListener("click", () => {
-      const open = body.classList.toggle("sidebar-open");
-      menuButton.setAttribute("aria-expanded", String(open));
-    });
-    $("#sidebarBackdrop").addEventListener("click", closeSidebar);
-    document.querySelectorAll(".sidebar .nav-link[href^='#']").forEach((link) => {
-      link.addEventListener("click", () => {
-        closeSidebar();
-        setActiveNav(link.dataset.nav);
-      });
-    });
-
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver((entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveNav(visible.target.id);
-      }, { rootMargin: "-35% 0px -55% 0px", threshold: [0.05, 0.25, 0.5] });
-      document.querySelectorAll(".section-block").forEach((section) => observer.observe(section));
-    }
-  }
-
-  function setActiveNav(id) {
-    document.querySelectorAll(".sidebar .nav-link[data-nav]").forEach((link) => {
-      link.classList.toggle("active", link.dataset.nav === id);
-    });
-  }
-
-  function attachEvents() {
-    $("#enrollmentFilters").addEventListener("submit", (event) => {
-      event.preventDefault();
-      loadEnrollments();
-    });
-    $("#resetEnrollmentFilters").addEventListener("click", () => {
-      $("#filterStudent").value = "";
-      $("#filterSemester").value = state.defaultSemesterId ? String(state.defaultSemesterId) : "";
-      $("#filterStatus").value = "";
-      $("#filterLimit").value = "50";
-      loadEnrollments();
-    });
-    $("#statisticsFilters").addEventListener("submit", (event) => {
-      event.preventDefault();
-      loadStatistics();
-    });
-    $("#resetStatsFilters").addEventListener("click", () => {
-      $("#statsSemester").value = state.defaultSemesterId ? String(state.defaultSemesterId) : "";
-      populateStatsSections();
-      $("#statsSection").value = "";
-      $("#statsMinSubmissions").value = "0";
-      loadStatistics();
-    });
-    $("#statsSemester").addEventListener("change", () => {
-      populateStatsSections();
-      $("#statsSection").value = "";
-    });
-    $("#openCreateBtn").addEventListener("click", openCreateModal);
-    $("#enrollmentForm").addEventListener("submit", saveEnrollment);
-    $("#confirmDeleteBtn").addEventListener("click", confirmDelete);
-    $("#refreshEnrollmentsBtn").addEventListener("click", loadEnrollments);
-    $("#refreshStatsBtn").addEventListener("click", loadStatistics);
-    $("#refreshDashboardBtn").addEventListener("click", () => {
-      loadDashboard();
-      loadHealth(true);
-    });
-    $("#refreshHealthBtn").addEventListener("click", () => loadHealth(true));
-    $("#calcCompletionBtn").addEventListener("click", runToolCompletion);
-    $("#calcAverageBtn").addEventListener("click", runAverage);
-    $("#loginSubmitBtn").addEventListener("click", submitLogin);
-    $("#logoutBtn").addEventListener("click", logout);
-    attachTableActions();
-    attachNavigation();
-  }
-
+  /* ------------------------------------------------------------------ */
+  /* Auth                                                                */
+  /* ------------------------------------------------------------------ */
   async function checkAuth() {
     try {
       const payload = await api("/api/auth/me");
@@ -653,38 +263,44 @@
       state.user = null;
       state.role = null;
     }
-
     const loginScreen = $("#loginScreen");
     const appShell = $("#appShell");
     if (state.role) {
-      loginScreen.classList.add("d-none");
-      appShell.style.display = "";
-      $("#userName").textContent = state.user?.FullName || "—";
-      $("#userRoleBadge").textContent = ROLE_LABELS[state.role] || state.role;
-      applyRoleNavigation();
+      loginScreen.hidden = true;
+      appShell.hidden = false;
+      applyUserChrome();
+      renderNav();
       return true;
     }
-    appShell.style.display = "none";
-    loginScreen.classList.remove("d-none");
-    loadLoginRoles();
+    loginScreen.hidden = false;
+    appShell.hidden = true;
     return false;
   }
 
-  async function loadLoginRoles() {
-    const cards = document.querySelectorAll("#loginRoleGrid .login-role-card");
-    cards.forEach((card) => {
-      card.addEventListener("click", () => selectLoginRole(card.dataset.role));
+  function applyUserChrome() {
+    const name = state.user?.FullName || "—";
+    $("#userName").textContent = name;
+    $("#userNameLg").textContent = name;
+    $("#userEmailLg").textContent = state.user?.Email || "";
+    $("#userRoleBadge").textContent = ROLE_LABELS[state.role] || state.role || "";
+    $("#userAvatar").textContent = initials(name);
+    $("#userAvatarLg").textContent = initials(name);
+  }
+
+  function bindLogin() {
+    $$("#loginRoleGrid .role-tile").forEach((tile) => {
+      tile.addEventListener("click", () => selectLoginRole(tile.dataset.role));
     });
+    $("#loginSubmitBtn").addEventListener("click", submitLogin);
   }
 
   async function selectLoginRole(role) {
     state.selectedRole = role;
-    document.querySelectorAll("#loginRoleGrid .login-role-card").forEach((card) => {
-      const active = card.dataset.role === role;
-      card.classList.toggle("selected", active);
-      card.setAttribute("aria-checked", String(active));
+    $$("#loginRoleGrid .role-tile").forEach((tile) => {
+      const active = tile.dataset.role === role;
+      tile.classList.toggle("selected", active);
+      tile.setAttribute("aria-checked", String(active));
     });
-
     const select = $("#loginAccountSelect");
     const empty = $("#loginAccountEmpty");
     const submit = $("#loginSubmitBtn");
@@ -694,7 +310,6 @@
     submit.disabled = true;
     empty.classList.remove("d-none");
     empty.textContent = "Đang tải tài khoản…";
-
     try {
       const payload = await api(`/api/auth/accounts?role=${encodeURIComponent(role)}`);
       const accounts = payload.data || [];
@@ -714,9 +329,9 @@
       select.classList.remove("d-none");
       select.disabled = false;
       empty.classList.add("d-none");
-      select.addEventListener("change", () => {
+      select.onchange = () => {
         submit.disabled = !select.value;
-      });
+      };
     } catch (error) {
       empty.textContent = error.message || "Không tải được tài khoản.";
     }
@@ -724,12 +339,20 @@
 
   async function submitLogin() {
     const role = state.selectedRole;
-    const user_id = Number($("#loginAccountSelect").value);
-    if (!role || !user_id) return;
+    const userId = Number($("#loginAccountSelect").value);
+    if (!role || !userId) return;
     const restore = setBusy($("#loginSubmitBtn"), "Đang đăng nhập…");
     try {
-      await api("/api/auth/login", { method: "POST", body: { role, user_id } });
-      await enterApp();
+      await api("/api/auth/login", { method: "POST", body: { role, user_id: userId } });
+      const ok = await checkAuth();
+      if (ok) {
+        state.courses = null;
+        state.profile = null;
+        state.grades = null;
+        state.adminCache = {};
+        location.hash = "#/dashboard";
+        await render();
+      }
     } catch (error) {
       notify(error.message, "danger");
     } finally {
@@ -741,378 +364,2044 @@
     try {
       await api("/api/auth/logout", { method: "POST" });
     } catch (error) {
-      // ignore logout network errors
+      // ignore
     }
+    state.user = null;
+    state.role = null;
+    state.courses = null;
+    state.profile = null;
+    state.grades = null;
+    state.adminCache = {};
+    location.hash = "";
     location.reload();
   }
 
-  async function enterApp() {
-    await checkAuth();
-    if (!state.role) return;
-    await loadCatalog();
-    await Promise.allSettled([
-      loadDashboard(),
-      loadHealth(),
-      loadEnrollments(),
-      loadStatistics(),
-    ]);
-  }
-
-  function applyRoleNavigation() {
-    const role = state.role;
-    const navItems = {
-      STUDENT: [
-        { id: "dashboard", glyph: "◫", label: "Tổng quan" },
-        { id: "courses", glyph: "▤", label: "Khóa học của tôi" },
-      ],
-      STAFF: [
-        { id: "dashboard", glyph: "◫", label: "Tổng quan" },
-        { id: "sections", glyph: "▤", label: "Lớp tôi dạy" },
-      ],
-      ADMIN: [
-        { id: "dashboard", glyph: "◫", label: "Tổng quan" },
-        { id: "admin", glyph: "⚙", label: "Quản trị" },
-        { id: "enrollments", glyph: "↔", label: "Ghi danh" },
-        { id: "statistics", glyph: "▤", label: "Thống kê bài tập" },
-        { id: "tools", glyph: "ƒ", label: "Hàm & quy trình" },
-        { id: "about", glyph: "ⓘ", label: "Kiến trúc" },
-      ],
-    }[role] || [];
-
-    const nav = $("#sidebarNav");
-    nav.innerHTML = navItems
-      .map(
-        (item, i) => `<a class="nav-link ${i === 0 ? "active" : ""}" href="#${item.id}" data-nav="${item.id}">
-          <span class="nav-glyph" aria-hidden="true">${item.glyph}</span> ${item.label}</a>`,
-      )
-      .join("");
-
-    // Show/hide legacy sections based on role.
-    const legacyIds = ["enrollments", "statistics", "tools", "about"];
-    legacyIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = role === "ADMIN" ? "" : "none";
+  function bindAccountMenu() {
+    const button = $("#accountBtn");
+    const dropdown = $("#accountDropdown");
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const open = dropdown.hidden;
+      dropdown.hidden = !open;
+      button.setAttribute("aria-expanded", String(open));
     });
-    const ws = $("#roleWorkspace");
-    ws.style.display = role === "ADMIN" ? "none" : "";
-
-    document.querySelectorAll("#sidebarNav .nav-link[href^='#']").forEach((link) => {
-      link.addEventListener("click", () => setActiveNav(link.dataset.nav));
+    document.addEventListener("click", (event) => {
+      if (!dropdown.hidden && !dropdown.contains(event.target) && event.target !== button) {
+        dropdown.hidden = true;
+        button.setAttribute("aria-expanded", "false");
+      }
     });
-
-    if (role === "STUDENT") renderStudentWorkspace();
-    if (role === "STAFF") renderStaffWorkspace();
-    if (role === "ADMIN") renderAdminWorkspace();
+    $("#logoutBtn").addEventListener("click", logout);
+    $("#profileBtn").addEventListener("click", () => {
+      dropdown.hidden = true;
+      location.hash = "#/profile";
+    });
   }
 
-  // ===== Role workspaces =====
-  function sectionCard(row) {
-    return `<div class="col-md-6 col-xl-4"><div class="panel course-card" data-section-id="${escapeHtml(row.SectionID)}" style="cursor:pointer">
-      <div class="course-thumb"></div>
-      <div class="panel-body">
-        <div class="cell-primary">${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</div>
-        <div class="cell-muted">${escapeHtml(row.SectionCode)} · ${escapeHtml(row.ComponentType)} · ${escapeHtml(row.RoomCode)}</div>
-        <div class="cell-muted">${dayName(row.DayOfWeek)} ${formatTime(row.StartTime)}–${formatTime(row.EndTime)}</div>
-        <div class="cell-muted">${escapeHtml(row.AcademicYear)} · HK${escapeHtml(row.TermNo)}</div>
-      </div>
-    </div></div>`;
+  /* ------------------------------------------------------------------ */
+  /* Navigation / router                                                 */
+  /* ------------------------------------------------------------------ */
+  const NAV = {
+    STUDENT: [
+      { key: "dashboard", label: "Bảng điều khiển", href: "#/dashboard" },
+      { key: "courses", label: "Các khoá học của tôi", href: "#/courses" },
+      { key: "grades", label: "Điểm của tôi", href: "#/grades" },
+    ],
+    STAFF: [
+      { key: "dashboard", label: "Bảng điều khiển", href: "#/dashboard" },
+      { key: "courses", label: "Lớp tôi dạy", href: "#/courses" },
+    ],
+    ADMIN: [
+      { key: "dashboard", label: "Bảng điều khiển", href: "#/dashboard" },
+      { key: "admin", label: "Quản trị", href: "#/admin" },
+      { key: "data", label: "Dữ liệu", href: "#/admin?tab=data" },
+    ],
+  };
+
+  function parseRoute() {
+    const raw = location.hash.replace(/^#\/?/, "") || "dashboard";
+    const [pathPart, queryPart] = raw.split("?");
+    return {
+      parts: pathPart.split("/").filter(Boolean),
+      query: new URLSearchParams(queryPart || ""),
+    };
   }
 
-  async function renderStudentWorkspace() {
-    const inner = $("#roleWorkspaceInner");
-    inner.innerHTML = `<div class="section-heading"><div><h2>Khóa học của tôi</h2><p>Các lớp bạn đã ghi danh. Bấm vào lớp để xem chi tiết.</p></div></div>
-      <div class="row g-3" id="studentCourses"></div>
-      <div id="studentDetail" class="mt-3"></div>`;
-    try {
-      const payload = await api("/api/student/sections");
-      const rows = payload.data || [];
-      const container = $("#studentCourses");
-      container.innerHTML = rows.length
-        ? rows.map(sectionCard).join("")
-        : '<div class="col-12"><div class="empty-state"><strong>Chưa có khóa học</strong></div></div>';
-      container.querySelectorAll("[data-section-id]").forEach((card) => {
-        card.addEventListener("click", () => loadStudentSection(card.dataset.sectionId));
-      });
-    } catch (error) {
-      notify(error.message, "danger");
-    }
-  }
-
-  async function loadStudentSection(sectionId) {
-    const detail = $("#studentDetail");
-    detail.innerHTML = '<div class="panel"><div class="panel-body">Đang tải lớp…</div></div>';
-    try {
-      const [sec, ann, res, asg, grd] = await Promise.allSettled([
-        api(`/api/student/sections/${sectionId}`),
-        api(`/api/student/sections/${sectionId}/announcements`),
-        api(`/api/student/sections/${sectionId}/resources`),
-        api(`/api/student/sections/${sectionId}/assessments`),
-        api("/api/student/grades"),
-      ]);
-      const section = sec.status === "fulfilled" ? sec.value.data : {};
-      detail.innerHTML = studentSectionHtml(section, ann, res, asg, grd);
-      detail.querySelectorAll("[data-submit-assignment]").forEach((btn) => {
-        btn.addEventListener("click", () => submitStudentAssignment(btn.dataset.submitAssignment));
-      });
-    } catch (error) {
-      notify(error.message, "danger");
-    }
-  }
-
-  function listValue(promise, field) {
-    return promise.status === "fulfilled" ? promise.value.data || [] : [];
-  }
-
-  function studentSectionHtml(section, ann, res, asg, grd) {
-    const announcements = listValue(ann);
-    const resources = listValue(res);
-    const assessments = listValue(asg);
-    const grades = listValue(grd);
-    const gradeRows = grades
-      .filter((g) => Number(g.EnrollmentID) || true)
-      .slice(0, 50)
-      .map(
-        (g) => `<tr><td>${escapeHtml(g.Title)}</td><td>${escapeHtml(g.SectionCode)}</td>
-          <td class="text-end">${formatNumber(g.Score)}/${formatNumber(g.MaxScore)}</td>
-          <td class="text-end">${formatPercent((g.Score / g.MaxScore) * 100)}</td></tr>`,
-      )
-      .join("");
-    const asgRows = assessments
-      .map((a) => {
-        const isAssignment = a.AssessmentType === "ASSIGNMENT";
-        const due = isAssignment ? `Hạn: ${formatDate(a.DueDate)}` : `Đóng: ${formatDate(a.CloseTime)} · ${a.DurationMinutes} phút`;
-        return `<div class="list-group-item d-flex justify-content-between align-items-center">
-          <div><div class="cell-primary">${escapeHtml(a.Title)}</div>
-          <div class="cell-muted">${isAssignment ? "Bài tập" : "Quiz"} · ${due} · Điểm tối đa ${formatNumber(a.MaxScore)}</div></div>
-          <div class="text-end">
-            <div>${a.Score != null ? `${formatNumber(a.Score)}/${formatNumber(a.MaxScore)}` : "Chưa chấm"}</div>
-            ${isAssignment ? `<button class="btn btn-sm btn-outline-primary mt-1" data-submit-assignment="${escapeHtml(a.AssessmentID)}">Nộp bài</button>` : ""}
-          </div></div>`;
+  function renderNav() {
+    const items = NAV[state.role] || [];
+    const { parts, query } = parseRoute();
+    const current = parts[0] || "dashboard";
+    const currentTab = query.get("tab") || "users";
+    $("#navLinks").innerHTML = items
+      .map((item) => {
+        let active = false;
+        if (item.key === "data") active = current === "admin" && currentTab === "data";
+        else if (item.key === "admin") active = current === "admin" && currentTab !== "data";
+        else active = current === item.key;
+        return `<a href="${item.href}" class="${active ? "active" : ""}">${escapeHtml(item.label)}</a>`;
       })
       .join("");
-    return `<div class="panel">
-      <div class="panel-header"><div><h3 class="panel-title">${escapeHtml(section.CourseCode)} · ${escapeHtml(section.CourseName)}</h3>
-        <p class="panel-subtitle">${escapeHtml(section.SectionCode)} · ${escapeHtml(section.ComponentType)} · ${escapeHtml(section.InstructorName || "Chưa có giảng viên")}</p></div>
-        ${statusBadge(section.EnrollmentStatus)}</div>
-      <div class="panel-body">
-        <h4 class="h6">Thông báo</h4>
-        ${announcements.length ? announcements.map((a) => `<div class="mb-2"><strong>${escapeHtml(a.Title)}</strong><div class="cell-muted">${formatDate(a.PostedAt)}</div><div>${escapeHtml(a.Content)}</div></div>`).join("") : '<div class="cell-muted">Không có thông báo.</div>'}
-        <hr>
-        <h4 class="h6">Tài liệu</h4>
-        ${resources.length ? `<ul class="note-list">${resources.map((r) => `<li><strong>${escapeHtml(r.Title)}</strong> <span class="cell-muted">(${escapeHtml(r.ResourceType)})</span> — ${escapeHtml(r.ResourceURL)}</li>`).join("")}</ul>` : '<div class="cell-muted">Không có tài liệu.</div>'}
-        <hr>
-        <h4 class="h6">Bài tập & Quiz</h4>
-        <div class="list-group">${asgRows || '<div class="cell-muted">Không có hoạt động đánh giá.</div>'}</div>
-        <hr>
-        <h4 class="h6">Điểm của tôi</h4>
-        <div class="table-responsive"><table class="table"><thead><tr><th>Hoạt động</th><th>Lớp</th><th class="text-end">Điểm</th><th class="text-end">%</th></tr></thead>
-        <tbody>${gradeRows || '<tr><td colspan="4" class="cell-muted">Chưa có điểm.</td></tr>'}</tbody></table></div>
-      </div></div>`;
   }
 
-  async function submitStudentAssignment(assessmentId) {
-    const fileUrl = window.prompt("Tên tệp (metadata, không upload thật):", "bai-nop.pdf");
-    if (fileUrl === null) return;
+  async function render() {
+    if (!state.role) return;
+    const { parts, query } = parseRoute();
+    renderNav();
+    const view = $("#view");
+    view.innerHTML = loadingState();
     try {
-      await api(`/api/student/assignments/${assessmentId}/submissions`, {
-        method: "POST",
-        body: { file_name: fileUrl, file_url: "/uploads/" + fileUrl, file_size: 1024 },
-      });
-      notify("Đã nộp bài.", "success");
+      if (parts[0] === "course") await renderCourse(Number(parts[1]));
+      else if (parts[0] === "courses") await renderCourses();
+      else if (parts[0] === "grades") await renderGrades();
+      else if (parts[0] === "profile") await renderProfile();
+      else if (parts[0] === "admin") await renderAdmin(query.get("tab") || "users");
+      else await renderDashboard();
     } catch (error) {
-      notify(error.message, "danger");
+      view.innerHTML = errorState(error.message || "Lỗi không xác định.");
     }
+    hydrateIcons(view);
+    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
 
-  async function renderStaffWorkspace() {
-    const inner = $("#roleWorkspaceInner");
-    inner.innerHTML = `<div class="section-heading"><div><h2>Lớp tôi dạy</h2><p>Các lớp bạn là giảng viên phụ trách chính.</p></div></div>
-      <div class="row g-3" id="staffSections"></div>
-      <div id="staffDetail" class="mt-3"></div>`;
-    try {
-      const payload = await api("/api/staff/sections");
-      const rows = payload.data || [];
-      const container = $("#staffSections");
-      container.innerHTML = rows.length
-        ? rows.map(sectionCard).join("")
-        : '<div class="col-12"><div class="empty-state"><strong>Chưa có lớp phụ trách</strong></div></div>';
-      container.querySelectorAll("[data-section-id]").forEach((card) => {
-        card.addEventListener("click", () => loadStaffSection(card.dataset.sectionId));
-      });
-    } catch (error) {
-      notify(error.message, "danger");
-    }
+  /* ------------------------------------------------------------------ */
+  /* Shared data loaders                                                 */
+  /* ------------------------------------------------------------------ */
+  async function loadCourses(force = false) {
+    if (state.courses && !force) return state.courses;
+    const path = state.role === "STAFF" ? "/api/staff/sections" : "/api/student/sections";
+    const payload = await api(path);
+    state.courses = payload.data || [];
+    return state.courses;
   }
 
-  async function loadStaffSection(sectionId) {
-    const detail = $("#staffDetail");
-    detail.innerHTML = '<div class="panel"><div class="panel-body">Đang tải…</div></div>';
-    try {
-      const [students, ann, res, asg, subs, grd] = await Promise.allSettled([
-        api(`/api/staff/sections/${sectionId}/students`),
-        api(`/api/staff/sections/${sectionId}/announcements`),
-        api(`/api/staff/sections/${sectionId}/resources`),
-        api(`/api/staff/sections/${sectionId}/assessments`),
-        api(`/api/staff/sections/${sectionId}/submissions`),
-        api(`/api/staff/sections/${sectionId}/grades`),
-      ]);
-      detail.innerHTML = staffSectionHtml(sectionId, students, ann, res, asg, subs, grd);
-      attachStaffActions(sectionId);
-    } catch (error) {
-      notify(error.message, "danger");
-    }
+  async function loadProfile(force = false) {
+    if (state.profile && !force) return state.profile;
+    if (state.role !== "STUDENT") return null;
+    const payload = await api("/api/student/profile");
+    state.profile = payload.data || null;
+    return state.profile;
   }
 
-  function staffSectionHtml(sectionId, students, ann, res, asg, subs, grd) {
-    const studentRows = listValue(students).map((s) => `<tr><td>${escapeHtml(s.StudentName)}</td><td>${escapeHtml(s.StudentCode)}</td><td>${statusBadge(s.EnrollmentStatus)}</td></tr>`).join("");
-    const annRows = listValue(ann).map((a) => `<tr><td>${escapeHtml(a.Title)}</td><td>${formatDate(a.PostedAt)}</td><td class="text-end"><button class="btn btn-sm btn-outline-danger" data-del-ann="${escapeHtml(a.AnnouncementID)}">Xóa</button></td></tr>`).join("");
-    const resRows = listValue(res).map((r) => `<tr><td>${escapeHtml(r.Title)}</td><td>${escapeHtml(r.ResourceType)}</td><td>${escapeHtml(r.ResourceURL)}</td><td class="text-end"><button class="btn btn-sm btn-outline-danger" data-unpost="${escapeHtml(r.ResourceID)}">Gỡ</button></td></tr>`).join("");
-    const asgRows = listValue(asg).map((a) => `<tr><td>${escapeHtml(a.Title)}</td><td>${escapeHtml(a.AssessmentType)}</td><td class="text-end">${formatNumber(a.MaxScore)}</td><td class="text-end"><button class="btn btn-sm btn-outline-danger" data-del-asg="${escapeHtml(a.AssessmentID)}">Xóa</button></td></tr>`).join("");
-    const subRows = listValue(subs).map((s) => `<tr><td>${escapeHtml(s.StudentName)}</td><td>${escapeHtml(s.AssignmentTitle)}</td><td>Lần ${escapeHtml(s.AttemptNo)}</td><td>${s.Score != null ? formatNumber(s.Score) : "—"}</td>
-      <td class="text-end"><button class="btn btn-sm btn-outline-primary" data-grade-sub="${escapeHtml(s.SubmissionID)}">Chấm</button></td></tr>`).join("");
-    const gradeRows = listValue(grd).map((g) => `<tr><td>${escapeHtml(g.StudentName)}</td><td>${escapeHtml(g.AssessmentTitle)}</td><td class="text-end">${formatNumber(g.Score)}</td><td>${g.IsPublished ? "Đã công bố" : "Ẩn"}</td></tr>`).join("");
-    return `<div class="panel">
-      <div class="panel-header"><h3 class="panel-title">Quản lý lớp #${escapeHtml(sectionId)}</h3></div>
-      <div class="panel-body">
-        <div class="row g-3">
-          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Sinh viên</h4></div>
-            <div class="table-responsive"><table class="table"><thead><tr><th>Tên</th><th>MSSV</th><th>Trạng thái</th></tr></thead><tbody>${studentRows || '<tr><td colspan="3" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
-          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Thông báo</h4><button class="btn btn-sm btn-primary" data-add-ann>+ Thêm</button></div>
-            <div class="table-responsive"><table class="table"><thead><tr><th>Tiêu đề</th><th>Đăng lúc</th><th></th></tr></thead><tbody>${annRows || '<tr><td colspan="3" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
-          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Tài liệu</h4><button class="btn btn-sm btn-primary" data-add-res>+ Thêm</button></div>
-            <div class="table-responsive"><table class="table"><thead><tr><th>Tiêu đề</th><th>Loại</th><th>URL</th><th></th></tr></thead><tbody>${resRows || '<tr><td colspan="4" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
-          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Bài tập & Quiz</h4><button class="btn btn-sm btn-primary" data-add-asg>+ Thêm</button></div>
-            <div class="table-responsive"><table class="table"><thead><tr><th>Tiêu đề</th><th>Loại</th><th class="text-end">Điểm tối đa</th><th></th></tr></thead><tbody>${asgRows || '<tr><td colspan="4" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
-          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Bài nộp</h4></div>
-            <div class="table-responsive"><table class="table"><thead><tr><th>Sinh viên</th><th>Bài tập</th><th>Lần</th><th>Điểm</th><th></th></tr></thead><tbody>${subRows || '<tr><td colspan="5" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
-          <div class="col-lg-6"><div class="panel"><div class="panel-header"><h4 class="h6 mb-0">Điểm</h4></div>
-            <div class="table-responsive"><table class="table"><thead><tr><th>Sinh viên</th><th>Hoạt động</th><th class="text-end">Điểm</th><th>Trạng thái</th></tr></thead><tbody>${gradeRows || '<tr><td colspan="4" class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div></div>
+  async function loadGrades(force = false) {
+    if (state.grades && !force) return state.grades;
+    if (state.role !== "STUDENT") return [];
+    const payload = await api("/api/student/grades");
+    state.grades = payload.data || [];
+    return state.grades;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Dashboard                                                           */
+  /* ------------------------------------------------------------------ */
+  async function renderDashboard() {
+    if (state.role === "STUDENT") return renderStudentDashboard();
+    if (state.role === "STAFF") return renderStaffDashboard();
+    return renderAdminDashboard();
+  }
+
+  function greeting() {
+    const hour = new Date().getHours();
+    if (hour < 11) return "Chào buổi sáng";
+    if (hour < 14) return "Chào buổi trưa";
+    if (hour < 18) return "Chào buổi chiều";
+    return "Chào buổi tối";
+  }
+
+  function pageHead(title, subtitle, crumbs) {
+    return `<div class="page-head">
+      <div class="breadcrumb-bar">${crumbs || '<a href="#/dashboard">Trang chủ</a>'}</div>
+      <h1 class="page-title">${escapeHtml(title)}</h1>
+      ${subtitle ? `<p class="page-subtitle">${escapeHtml(subtitle)}</p>` : ""}
+    </div>`;
+  }
+
+  async function renderStudentDashboard() {
+    const [profileResult, coursesResult, gradesResult] = await Promise.allSettled([
+      loadProfile(true),
+      loadCourses(true),
+      loadGrades(true),
+    ]);
+    const profile = profileResult.status === "fulfilled" ? profileResult.value || {} : {};
+    const courses = coursesResult.status === "fulfilled" ? coursesResult.value : [];
+    const grades = gradesResult.status === "fulfilled" ? gradesResult.value : [];
+    const active = courses.filter((row) => row.EnrollmentStatus === "ACTIVE");
+    const published = grades.filter((g) => g.IsPublished);
+    const average = published.length
+      ? published.reduce((sum, g) => sum + (Number(g.ScorePercent) || 0), 0) / published.length
+      : null;
+    const upcoming = await loadUpcoming(courses);
+
+    $("#view").innerHTML = `
+      ${pageHead("Bảng điều khiển", `${greeting()}, ${profile.FullName || state.user?.FullName || "bạn"}. Đây là tổng quan học tập của bạn.`)}
+      <div class="panel mb-3">
+        <div class="panel-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <span class="avatar" style="width:56px;height:56px;font-size:1.05rem">${escapeHtml(initials(profile.FullName || state.user?.FullName))}</span>
+            <div>
+              <div class="cell-primary" style="font-size:1.05rem">${escapeHtml(profile.FullName || "—")}</div>
+              <div class="cell-muted">${escapeHtml(profile.StudentCode || "")} · ${escapeHtml(profile.FacultyName || "—")}</div>
+              <div class="cell-muted">${escapeHtml(profile.Email || "")}</div>
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <a class="btn btn-soft btn-sm" href="#/courses">Xem khoá học</a>
+            <a class="btn btn-pink btn-sm" href="#/grades">Xem điểm</a>
+          </div>
         </div>
-      </div></div>`;
+      </div>
+      <div class="stat-grid mb-2">
+        <article class="stat-card" style="--accent:var(--pink-500)">
+          <div class="stat-label">Khoá học</div>
+          <div class="stat-value">${formatNumber(courses.length)}</div>
+          <div class="stat-hint">${formatNumber(active.length)} đang học</div>
+        </article>
+        <article class="stat-card" style="--accent:#c11c84">
+          <div class="stat-label">Bài đã chấm</div>
+          <div class="stat-value">${formatNumber(published.length)}</div>
+          <div class="stat-hint">Điểm đã công bố</div>
+        </article>
+        <article class="stat-card" style="--accent:#a63d7f">
+          <div class="stat-label">Điểm trung bình</div>
+          <div class="stat-value">${average === null ? "—" : formatPercent(average)}</div>
+          <div class="stat-hint">Theo các đầu điểm đã công bố</div>
+        </article>
+        <article class="stat-card" style="--accent:#d76b8f">
+          <div class="stat-label">Quá hạn</div>
+          <div class="stat-value">${formatNumber(upcoming.filter((item) => item.overdue).length)}</div>
+          <div class="stat-hint">Bài tập và quiz cần xử lý</div>
+        </article>
+      </div>
+      <div class="row g-3 mt-1">
+        <div class="col-lg-7">
+          <div class="panel h-100">
+            <div class="panel-head">
+              <div><h3>Hạn nộp</h3><p>Bài tập và quiz gần nhất</p></div>
+              <a class="btn btn-light btn-sm" href="#/courses">Tất cả khoá học</a>
+            </div>
+            <div class="panel-body">
+              ${upcoming.length ? `<div class="stack">${upcoming.slice(0, 6).map(upcomingRow).join("")}</div>` : emptyState("Không có hoạt động sắp tới", "Bạn đã hoàn thành các hoạt động hiện có.")}
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="panel h-100">
+            <div class="panel-head"><div><h3>Khoá học gần đây</h3><p>Các lớp bạn đang theo học</p></div></div>
+            <div class="panel-body">
+              ${active.length ? `<div class="stack">${active.slice(0, 4).map((row) => `
+                <a class="list-row text-decoration-none" href="#/course/${escapeHtml(row.SectionID)}">
+                  <div class="list-row-flex">
+                    <span class="row-icon">${icon("book")}</span>
+                    <div class="list-row-main">
+                      <div class="list-row-title">${escapeHtml(row.CourseName)}</div>
+                      <div class="list-row-meta">${escapeHtml(row.SectionCode)} · ${escapeHtml(row.InstructorName || "Chưa có giảng viên")}</div>
+                    </div>
+                  </div>
+                  <span class="list-row-side cell-muted">${escapeHtml(semesterLabel(row))}</span>
+                </a>`).join("")}</div>` : emptyState("Chưa có khoá học", "Hãy đăng ký môn học để bắt đầu.")}
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
-  function attachStaffActions(sectionId) {
-    const inner = $("#roleWorkspaceInner");
-    inner.querySelectorAll("[data-del-ann]").forEach((btn) => btn.addEventListener("click", async () => {
-      try { await api(`/api/staff/announcements/${btn.dataset.delAnn}`, { method: "DELETE" }); notify("Đã xóa thông báo."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
-    }));
-    inner.querySelectorAll("[data-unpost]").forEach((btn) => btn.addEventListener("click", async () => {
-      try { await api(`/api/staff/sections/${sectionId}/resources/${btn.dataset.unpost}`, { method: "DELETE" }); notify("Đã gỡ tài liệu."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
-    }));
-    inner.querySelectorAll("[data-del-asg]").forEach((btn) => btn.addEventListener("click", async () => {
-      try { await api(`/api/staff/assessments/${btn.dataset.delAsg}`, { method: "DELETE" }); notify("Đã xóa assessment."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
-    }));
-    inner.querySelectorAll("[data-grade-sub]").forEach((btn) => btn.addEventListener("click", async () => {
-      const score = window.prompt("Nhập điểm cho bài nộp:", "");
-      if (score === null) return;
-      try { await api(`/api/staff/submissions/${btn.dataset.gradeSub}/grade`, { method: "PATCH", body: { score: Number(score) } }); notify("Đã chấm bài."); loadStaffSection(sectionId); } catch (e) { notify(e.message, "danger"); }
-    }));
-    inner.querySelector("[data-add-ann]")?.addEventListener("click", () => {
-      const title = window.prompt("Tiêu đề thông báo:", "");
-      if (title === null) return;
-      const content = window.prompt("Nội dung:", "") || "";
-      api(`/api/staff/sections/${sectionId}/announcements`, { method: "POST", body: { title, content } }).then(() => { notify("Đã thêm thông báo."); loadStaffSection(sectionId); }).catch((e) => notify(e.message, "danger"));
-    });
-    inner.querySelector("[data-add-res]")?.addEventListener("click", () => {
-      const title = window.prompt("Tiêu đề tài liệu:", "");
-      if (title === null) return;
-      const url = window.prompt("URL:", "/resources/file.pdf") || "/resources/file.pdf";
-      api(`/api/staff/sections/${sectionId}/resources`, { method: "POST", body: { title, description: "", resource_type: "DOCUMENT", resource_url: url, display_order: 0 } }).then(() => { notify("Đã thêm tài liệu."); loadStaffSection(sectionId); }).catch((e) => notify(e.message, "danger"));
-    });
-    inner.querySelector("[data-add-asg]")?.addEventListener("click", () => {
-      const title = window.prompt("Tiêu đề bài tập:", "");
-      if (title === null) return;
-      api(`/api/staff/sections/${sectionId}/assignments`, { method: "POST", body: { title, description: "", max_score: 10, max_attempts: 3, open_date: "2026-11-01 00:00:00", due_date: "2026-12-31 23:59:59", allow_late: true, attachments: [] } }).then(() => { notify("Đã thêm bài tập."); loadStaffSection(sectionId); }).catch((e) => notify(e.message, "danger"));
-    });
+  function upcomingRow(item) {
+    return `<div class="list-row">
+      <div class="list-row-flex">
+        <span class="row-icon">${icon(item.type === "QUIZ" ? "clock" : "file")}</span>
+        <div class="list-row-main">
+          <div class="list-row-title">${escapeHtml(item.Title)}</div>
+          <div class="list-row-meta">${escapeHtml(item.CourseName)} · ${escapeHtml(item.SectionCode)} · ${item.type === "QUIZ" ? "Quiz" : "Bài tập"}</div>
+        </div>
+      </div>
+      <span class="list-row-side">
+        <span class="badge-soft ${item.overdue ? "dropped" : "active"}">${item.overdue ? "Quá hạn" : "Sắp tới"}</span>
+        <span class="cell-muted">${escapeHtml(formatDate(item.due))}</span>
+      </span>
+    </div>`;
   }
 
-  async function renderAdminWorkspace() {
-    const inner = $("#roleWorkspaceInner");
-    inner.innerHTML = `<div class="section-heading"><div><h2>Quản trị</h2><p>Quản lý tài khoản, danh mục và khám phá dữ liệu.</p></div></div>
-      <ul class="nav nav-pills gap-2 mb-3" id="adminTabs">
-        <li class="nav-item"><button class="nav-link active" data-admin-tab="users">Người dùng</button></li>
-        <li class="nav-item"><button class="nav-link" data-admin-tab="faculties">Khoa</button></li>
-        <li class="nav-item"><button class="nav-link" data-admin-tab="semesters">Học kỳ</button></li>
-        <li class="nav-item"><button class="nav-link" data-admin-tab="courses">Môn học</button></li>
-        <li class="nav-item"><button class="nav-link" data-admin-tab="components">Thành phần</button></li>
-        <li class="nav-item"><button class="nav-link" data-admin-tab="sections">Lớp học phần</button></li>
-        <li class="nav-item"><button class="nav-link" data-admin-tab="data">Dữ liệu</button></li>
-      </ul>
-      <div id="adminTabContent"></div>`;
-    $("#adminTabs").querySelectorAll("[data-admin-tab]").forEach((tab) => {
-      tab.addEventListener("click", () => {
-        $("#adminTabs").querySelectorAll("[data-admin-tab]").forEach((t) => t.classList.remove("active"));
-        tab.classList.add("active");
-        loadAdminTab(tab.dataset.adminTab);
+  async function loadUpcoming(courses) {
+    if (!courses.length) return [];
+    const results = await Promise.allSettled(
+      courses.map((row) => api(`/api/student/sections/${row.SectionID}/assessments`)),
+    );
+    const items = [];
+    results.forEach((result, index) => {
+      if (result.status !== "fulfilled") return;
+      const course = courses[index];
+      for (const assessment of result.value.data || []) {
+        const due = assessment.DueDate || assessment.CloseTime || assessment.OpenDate || assessment.OpenTime;
+        if (!due) continue;
+        items.push({
+          ...assessment,
+          CourseName: course.CourseName,
+          SectionCode: course.SectionCode,
+          due,
+          overdue: new Date(String(due).replace(" ", "T")) < new Date(),
+          type: assessment.AssessmentType,
+        });
+      }
+    });
+    items.sort((a, b) => new Date(String(a.due).replace(" ", "T")) - new Date(String(b.due).replace(" ", "T")));
+    return items;
+  }
+
+  async function renderStaffDashboard() {
+    const courses = await loadCourses(true);
+    const details = await Promise.allSettled(
+      courses.map((row) => api(`/api/staff/sections/${row.SectionID}/submissions`)),
+    );
+    let totalStudents = 0;
+    const studentResults = await Promise.allSettled(
+      courses.map((row) => api(`/api/staff/sections/${row.SectionID}/students`)),
+    );
+    studentResults.forEach((result) => {
+      if (result.status === "fulfilled") totalStudents += (result.value.data || []).length;
+    });
+    const submissions = [];
+    details.forEach((result) => {
+      if (result.status === "fulfilled") submissions.push(...(result.value.data || []));
+    });
+    const ungraded = submissions.filter((row) => row.Score == null).length;
+
+    $("#view").innerHTML = `
+      ${pageHead("Bảng điều khiển", `${greeting()}, ${state.user?.FullName || "bạn"}. Theo dõi các lớp bạn phụ trách.`)}
+      <div class="stat-grid mb-2">
+        <article class="stat-card" style="--accent:var(--pink-500)">
+          <div class="stat-label">Lớp phụ trách</div>
+          <div class="stat-value">${formatNumber(courses.length)}</div>
+          <div class="stat-hint">Học kỳ hiện tại và trước đó</div>
+        </article>
+        <article class="stat-card" style="--accent:#c11c84">
+          <div class="stat-label">Sinh viên</div>
+          <div class="stat-value">${formatNumber(totalStudents)}</div>
+          <div class="stat-hint">Trên tất cả lớp</div>
+        </article>
+        <article class="stat-card" style="--accent:#a63d7f">
+          <div class="stat-label">Lượt nộp</div>
+          <div class="stat-value">${formatNumber(submissions.length)}</div>
+          <div class="stat-hint">Bài nộp nhận được</div>
+        </article>
+        <article class="stat-card" style="--accent:#d76b8f">
+          <div class="stat-label">Chờ chấm</div>
+          <div class="stat-value">${formatNumber(ungraded)}</div>
+          <div class="stat-hint">Bài nộp chưa có điểm</div>
+        </article>
+      </div>
+      <div class="section-title"><div><h2>Lớp tôi dạy</h2><p>Chọn một lớp để quản lý nội dung và điểm.</p></div><a class="btn btn-pink btn-sm" href="#/courses">Xem tất cả</a></div>
+      ${courses.length ? `<div class="course-grid list">${courses.slice(0, 6).map((row) => courseCard(row, "staff")).join("")}</div>` : emptyState("Chưa có lớp phụ trách")}`;
+    bindCourseClicks();
+  }
+
+  async function renderAdminDashboard() {
+    let overview = {};
+    try {
+      const payload = await api("/api/statistics/overview");
+      overview = payload.data || {};
+    } catch (error) {
+      overview = {};
+    }
+    let users = [];
+    try {
+      users = (await api("/api/admin/users")).data || [];
+    } catch (error) {
+      users = [];
+    }
+    const activeUsers = users.filter((u) => u.AccountStatus === "ACTIVE").length;
+    $("#view").innerHTML = `
+      ${pageHead("Bảng điều khiển", `${greeting()}, ${state.user?.FullName || "bạn"}. Tổng quan toàn hệ thống.`)}
+      <div class="stat-grid mb-2">
+        <article class="stat-card" style="--accent:var(--pink-500)"><div class="stat-label">Tài khoản</div><div class="stat-value">${formatNumber(users.length)}</div><div class="stat-hint">${formatNumber(activeUsers)} đang hoạt động</div></article>
+        <article class="stat-card" style="--accent:#c11c84"><div class="stat-label">Lớp học phần</div><div class="stat-value">${formatNumber(overview.section_count)}</div><div class="stat-hint">Tất cả học kỳ</div></article>
+        <article class="stat-card" style="--accent:#a63d7f"><div class="stat-label">Ghi danh</div><div class="stat-value">${formatNumber(overview.enrollment_count)}</div><div class="stat-hint">${formatNumber(overview.active_enrollment_count)} đang hoạt động</div></article>
+        <article class="stat-card" style="--accent:#d76b8f"><div class="stat-label">Điểm đã công bố</div><div class="stat-value">${formatNumber(overview.published_grade_count)}</div><div class="stat-hint">Toàn hệ thống</div></article>
+      </div>
+      <div class="row g-3 mt-1">
+        <div class="col-lg-7">
+          <div class="panel h-100">
+            <div class="panel-head"><div><h3>Quản trị nhanh</h3><p>Đi thẳng tới nhóm dữ liệu cần thao tác</p></div></div>
+            <div class="panel-body stack">
+              ${adminQuickLink("users", "user", "Người dùng", "Tạo tài khoản, khóa hoặc mở khóa")}
+              ${adminQuickLink("sections", "calendar", "Lớp học phần", "Xếp lịch, phòng học và giảng viên")}
+              ${adminQuickLink("courses", "book", "Môn học", "Mã môn, số tín chỉ và khoa")}
+              ${adminQuickLink("data", "database", "Dữ liệu", "Khám phá toàn bộ 22 bảng")}
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="panel h-100">
+            <div class="panel-head"><div><h3>Tài khoản theo vai trò</h3><p>Phân bố hiện tại</p></div></div>
+            <div class="panel-body stack">
+              ${["STUDENT", "STAFF", "ADMIN"].map((role) => {
+                const count = users.filter((u) => u.Role === role).length;
+                return `<div class="list-row"><div class="list-row-flex"><span class="row-icon">${icon(role === "STUDENT" ? "graduation" : role === "STAFF" ? "users" : "shield")}</span><div class="list-row-main"><div class="list-row-title">${ROLE_LABELS[role]}</div><div class="list-row-meta">${formatNumber(count)} tài khoản</div></div></div></div>`;
+              }).join("")}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function adminQuickLink(tab, iconName, title, note) {
+    return `<a class="list-row text-decoration-none" href="#/admin?tab=${tab}">
+      <div class="list-row-flex"><span class="row-icon">${icon(iconName)}</span>
+      <div class="list-row-main"><div class="list-row-title">${escapeHtml(title)}</div><div class="list-row-meta">${escapeHtml(note)}</div></div></div>
+      <span class="list-row-side cell-muted">${icon("chevron-right")}</span></a>`;
+  }
+  /* ------------------------------------------------------------------ */
+  /* Course list                                                         */
+  /* ------------------------------------------------------------------ */
+  async function renderCourses() {
+    const courses = await loadCourses(true);
+    const isStaff = state.role === "STAFF";
+    const title = isStaff ? "Lớp tôi dạy" : "Các khoá học của tôi";
+    const subtitle = isStaff
+      ? "Các lớp học phần bạn là giảng viên phụ trách chính. Chọn một lớp để quản lý nội dung và điểm."
+      : "Tổng quan các khoá học bạn đã ghi danh trong học kỳ này và các học kỳ trước.";
+    $("#view").innerHTML = `
+      ${pageHead(title, subtitle, `<a href="#/dashboard">Trang chủ</a><span>›</span><span>${escapeHtml(title)}</span>`)}
+      <section class="overview" aria-label="Bộ lọc khoá học">
+        <h2 class="overview-title">Tổng quan về khoá học</h2>
+        <div class="overview-toolbar">
+          <select class="form-select form-select-sm" id="courseFilter" aria-label="Lọc theo trạng thái">
+            <option value="all">Tất cả khoá học</option>
+            <option value="inprogress">Đang diễn ra</option>
+            <option value="completed">Đã hoàn thành</option>
+            <option value="dropped">Đã huỷ</option>
+          </select>
+          <div class="search-wrap">
+            ${icon("search")}
+            <input class="form-control form-control-sm" id="courseSearch" type="search" placeholder="Tìm kiếm khoá học" aria-label="Tìm kiếm khoá học">
+          </div>
+          <select class="form-select form-select-sm" id="courseSort" aria-label="Sắp xếp">
+            <option value="name">Sắp xếp theo tên khoá học</option>
+            <option value="code">Sắp xếp theo mã môn</option>
+            <option value="recent">Học kỳ gần nhất</option>
+          </select>
+          <div class="view-toggle" role="group" aria-label="Kiểu hiển thị">
+            <button type="button" data-view="list" class="active" aria-label="Danh sách">${icon("list")}</button>
+            <button type="button" data-view="grid" aria-label="Lưới">${icon("grid")}</button>
+          </div>
+          ${isStaff ? "" : '<button type="button" class="btn btn-pink btn-sm ms-auto" id="openCatalogBtn">+ Đăng ký môn học</button>'}
+        </div>
+      </section>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="cell-muted" id="courseCount"></span>
+        <span class="cell-muted" id="courseViewNote"></span>
+      </div>
+      <div id="courseList"></div>`;
+
+    state.allCourses = courses;
+    $("#courseFilter").value = state.courseFilter;
+    $("#courseSearch").value = state.search;
+    $("#courseSort").value = state.courseSort;
+    renderCourseList();
+
+    $("#courseFilter").addEventListener("change", (event) => {
+      state.courseFilter = event.target.value;
+      renderCourseList();
+    });
+    $("#courseSearch").addEventListener("input", (event) => {
+      state.search = event.target.value;
+      renderCourseList();
+    });
+    $("#courseSort").addEventListener("change", (event) => {
+      state.courseSort = event.target.value;
+      renderCourseList();
+    });
+    $$(".view-toggle [data-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.viewMode = button.dataset.view;
+        $$(".view-toggle [data-view]").forEach((item) => item.classList.toggle("active", item === button));
+        renderCourseList();
       });
     });
-    await loadAdminTab("users");
+    if (!isStaff) $("#openCatalogBtn").addEventListener("click", openCatalogModal);
+    bindCourseClicks();
+  }
+
+  function filteredCourses() {
+    const courses = state.allCourses || [];
+    const isStaff = state.role === "STAFF";
+    const query = state.search.trim().toLowerCase();
+    let rows = courses.filter((row) => {
+      if (query) {
+        const haystack = [row.CourseName, row.CourseCode, row.SectionCode, row.InstructorName, row.FacultyName]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      if (state.courseFilter === "all") return true;
+      const status = String(isStaff ? row.SectionStatus : row.EnrollmentStatus || "").toUpperCase();
+      if (state.courseFilter === "inprogress") return status === "ACTIVE" || status === "OPEN";
+      if (state.courseFilter === "completed") return status === "COMPLETED";
+      if (state.courseFilter === "dropped") return status === "DROPPED";
+      return true;
+    });
+    const key = state.courseSort;
+    rows = rows.slice().sort((a, b) => {
+      if (key === "code") return String(a.CourseCode).localeCompare(String(b.CourseCode), "vi");
+      if (key === "recent") {
+        const yearDiff = String(b.AcademicYear || "").localeCompare(String(a.AcademicYear || ""));
+        return yearDiff !== 0 ? yearDiff : Number(b.TermNo || 0) - Number(a.TermNo || 0);
+      }
+      return String(a.CourseName).localeCompare(String(b.CourseName), "vi");
+    });
+    return rows;
+  }
+
+  function renderCourseList() {
+    const rows = filteredCourses();
+    const container = $("#courseList");
+    if (!container) return;
+    $("#courseCount").textContent = `${formatNumber(rows.length)} khoá học`;
+    $("#courseViewNote").textContent = state.role === "STAFF" ? "Vai trò: giảng viên phụ trách" : "Vai trò: sinh viên";
+    container.innerHTML = rows.length
+      ? `<div class="course-grid ${state.viewMode}">${rows.map((row) => courseCard(row, state.role === "STAFF" ? "staff" : "student")).join("")}</div>`
+      : emptyState("Không tìm thấy khoá học", "Thử đổi bộ lọc, từ khoá tìm kiếm hoặc đăng ký môn học mới.", "▤");
+    bindCourseClicks();
+  }
+
+  function courseCard(row, mode) {
+    const staff = mode === "staff";
+    const component = row.ComponentName || row.ComponentType || "Học phần";
+    const instructor = row.InstructorName || (staff ? state.user?.FullName : "") || "Chưa phân công";
+    const faculty = [row.FacultyName, row.FacultyNameEN].filter(Boolean).join(" · ");
+    const schedule = row.DayOfWeek
+      ? `${dayName(row.DayOfWeek)} ${formatTime(row.StartTime)}–${formatTime(row.EndTime)} · ${row.RoomCode || "—"}`
+      : "";
+    const extra = staff
+      ? `${formatNumber(row.Capacity)} chỗ`
+      : `Điểm TB: ${row.AverageScore == null ? "—" : formatPercent(row.AverageScore)}`;
+    return `<a class="course-card" href="#/course/${escapeHtml(row.SectionID)}" data-course-id="${escapeHtml(row.SectionID)}">
+      <div class="course-thumb ${thumbVariant(row.CourseID || row.SectionID)}">
+        <span class="thumb-label">${escapeHtml(row.CourseCode || "BK-LMS")}</span>
+      </div>
+      <div class="course-body">
+        <span class="course-kicker">${escapeHtml(component)} · ${escapeHtml(row.SectionCode || "")}</span>
+        <h3 class="course-title">${escapeHtml(row.CourseName || "Khoá học")}</h3>
+        <div class="course-meta">${escapeHtml(instructor)}</div>
+        ${faculty ? `<div class="course-faculty">${escapeHtml(faculty)}</div>` : ""}
+        <div class="course-meta">${escapeHtml(semesterLabel(row))}${schedule ? ` <span class="dot">•</span> ${escapeHtml(schedule)}` : ""}</div>
+        <div class="course-faculty">${escapeHtml(extra)}</div>
+      </div>
+      <div class="course-actions">
+        <span class="more-btn" aria-hidden="true">${icon("more")}</span>
+      </div>
+    </a>`;
+  }
+
+  function bindCourseClicks() {
+    // Links already navigate via href; nothing else required.
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Catalog (student self-enrollment)                                   */
+  /* ------------------------------------------------------------------ */
+  async function openCatalogModal() {
+    const body = openModal({
+      title: "Đăng ký môn học",
+      size: "lg",
+      body: loadingState("Đang tải danh mục lớp học phần…"),
+      footer: '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>',
+    });
+    try {
+      const rows = (await api("/api/student/catalog-sections")).data || [];
+      body.innerHTML = `<p class="cell-muted mb-3">Chọn lớp học phần còn chỗ. Việc ghi danh đi qua <code>sp_InsertEnrollment</code> và được kiểm tra sĩ số, trùng lặp ở tầng cơ sở dữ liệu.</p>
+        <div class="stack">${rows.map((row) => {
+          const enrolled = row.EnrollmentID && row.EnrollmentStatus === "ACTIVE";
+          const dropped = row.EnrollmentID && row.EnrollmentStatus === "DROPPED";
+          const full = Number(row.ActiveEnrollmentCount) >= Number(row.Capacity);
+          return `<div class="list-row">
+            <div class="list-row-flex">
+              <span class="row-icon">${icon("book")}</span>
+              <div class="list-row-main">
+                <div class="list-row-title">${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</div>
+                <div class="list-row-meta">${escapeHtml(row.SectionCode)} · ${escapeHtml(row.ComponentType)} · ${escapeHtml(row.InstructorName || "Chưa có giảng viên")}</div>
+                <div class="list-row-meta">${escapeHtml(semesterLabel(row))} · ${escapeHtml(dayName(row.DayOfWeek))} ${formatTime(row.StartTime)}–${formatTime(row.EndTime)} · ${escapeHtml(row.RoomCode || "")}</div>
+                <div class="list-row-meta">${formatNumber(row.ActiveEnrollmentCount)}/${formatNumber(row.Capacity)} chỗ · ${escapeHtml(row.FacultyName || "")}</div>
+              </div>
+            </div>
+            <div class="list-row-side">
+              ${enrolled
+                ? `<span class="badge-soft active">Đã đăng ký</span><button type="button" class="btn btn-light btn-sm" data-drop="${escapeHtml(row.EnrollmentID)}">Huỷ</button>`
+                : `<button type="button" class="btn ${full ? "btn-light" : "btn-pink"} btn-sm" data-enroll="${escapeHtml(row.SectionID)}" ${full ? "disabled" : ""}>${dropped ? "Đăng ký lại" : full ? "Hết chỗ" : "Đăng ký"}</button>`}
+            </div>
+          </div>`;
+        }).join("")}</div>`;
+      body.querySelectorAll("[data-enroll]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const restore = setBusy(button, "Đang đăng ký…");
+          try {
+            await api("/api/student/enrollments", { method: "POST", body: { section_id: Number(button.dataset.enroll) } });
+            notify("Đã đăng ký lớp học phần.", "success");
+            state.courses = null;
+            await openCatalogModal();
+            await render();
+          } catch (error) {
+            notify(error.message, "danger");
+            restore();
+          }
+        });
+      });
+      body.querySelectorAll("[data-drop]").forEach((button) => {
+        button.addEventListener("click", () => {
+          confirmAction("Huỷ đăng ký lớp học phần này? Ghi danh sẽ chuyển sang trạng thái <strong>DROPPED</strong>.", async () => {
+            try {
+              await api(`/api/student/enrollments/${button.dataset.drop}/drop`, { method: "PATCH" });
+              notify("Đã huỷ đăng ký.", "success");
+              state.courses = null;
+              await openCatalogModal();
+              await render();
+            } catch (error) {
+              notify(error.message, "danger");
+            }
+          });
+        });
+      });
+    } catch (error) {
+      body.innerHTML = errorState(error.message);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Grades                                                              */
+  /* ------------------------------------------------------------------ */
+  async function renderGrades() {
+    const grades = await loadGrades(true);
+    const rows = grades.filter((g) => g.IsPublished);
+    const byCourse = new Map();
+    rows.forEach((grade) => {
+      const key = `${grade.CourseCode}||${grade.SectionCode}`;
+      if (!byCourse.has(key)) byCourse.set(key, []);
+      byCourse.get(key).push(grade);
+    });
+    $("#view").innerHTML = `
+      ${pageHead("Điểm của tôi", "Chỉ các đầu điểm đã được công bố mới hiển thị với sinh viên.", `<a href="#/dashboard">Trang chủ</a><span>›</span><span>Điểm của tôi</span>`)}
+      ${rows.length ? `<div class="stack">${[...byCourse.entries()].map(([key, items]) => {
+        const [courseCode, sectionCode] = key.split("||");
+        const first = items[0];
+        const average = items.reduce((sum, item) => sum + (Number(item.ScorePercent) || 0), 0) / items.length;
+        return `<div class="panel">
+          <div class="panel-head">
+            <div><h3>${escapeHtml(courseCode)} · ${escapeHtml(first.CourseName)}</h3><p>${escapeHtml(sectionCode)} · ${escapeHtml(semesterLabel(first))}</p></div>
+            <span class="badge-soft">TB ${formatPercent(average)}</span>
+          </div>
+          <div class="table-responsive"><table class="table">
+            <thead><tr><th>Đầu điểm</th><th>Điểm</th><th>Tối đa</th><th>Phần trăm</th><th>Ngày chấm</th></tr></thead>
+            <tbody>${items.map((item) => `<tr>
+              <td class="cell-primary">${escapeHtml(item.Title)}</td>
+              <td class="mono">${formatNumber(item.Score)}</td>
+              <td class="mono cell-muted">${formatNumber(item.MaxScore)}</td>
+              <td class="mono">${formatPercent(item.ScorePercent)}</td>
+              <td class="cell-muted">${escapeHtml(formatDate(item.GradedAt))}</td>
+            </tr>`).join("")}</tbody>
+          </table></div>
+        </div>`;
+      }).join("")}</div>` : emptyState("Chưa có điểm nào được công bố", "Khi giảng viên công bố điểm, các đầu điểm sẽ xuất hiện tại đây.", "★")}`;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Profile                                                             */
+  /* ------------------------------------------------------------------ */
+  async function renderProfile() {
+    let profile = null;
+    if (state.role === "STUDENT") {
+      profile = await loadProfile(true);
+    }
+    const user = state.user || {};
+    const fields = state.role === "STUDENT" && profile
+      ? [
+          ["Họ và tên", profile.FullName],
+          ["Mã số sinh viên", profile.StudentCode],
+          ["Email", profile.Email],
+          ["Khoa", profile.FacultyName],
+          ["Tên khoa (EN)", profile.FacultyNameEN],
+          ["Trạng thái tài khoản", profile.AccountStatus],
+          ["Đăng nhập gần nhất", formatDate(profile.LastAccessAt)],
+        ]
+      : [
+          ["Họ và tên", user.FullName],
+          ["Email", user.Email],
+          ["Vai trò", ROLE_LABELS[state.role] || state.role],
+          ["Trạng thái tài khoản", user.AccountStatus],
+          ["Đăng nhập gần nhất", formatDate(user.LastAccessAt)],
+        ];
+    $("#view").innerHTML = `
+      ${pageHead("Hồ sơ của tôi", "Thông tin tài khoản đang đăng nhập trong phiên demo.", `<a href="#/dashboard">Trang chủ</a><span>›</span><span>Hồ sơ</span>`)}
+      <div class="panel">
+        <div class="panel-body d-flex align-items-center gap-3">
+          <span class="avatar" style="width:64px;height:64px;font-size:1.2rem">${escapeHtml(initials(user.FullName))}</span>
+          <div>
+            <div class="cell-primary" style="font-size:1.15rem">${escapeHtml(user.FullName || "—")}</div>
+            <div class="cell-muted">${escapeHtml(user.Email || "")}</div>
+            <span class="badge-soft mt-1">${escapeHtml(ROLE_LABELS[state.role] || state.role || "")}</span>
+          </div>
+        </div>
+      </div>
+      <div class="section-title"><h2>Chi tiết</h2></div>
+      <div class="profile-grid">${fields.map(([key, value]) => `<div class="detail-item"><div class="k">${escapeHtml(key)}</div><div class="v">${escapeHtml(value == null || value === "" ? "—" : value)}</div></div>`).join("")}</div>`;
+  }
+  /* ------------------------------------------------------------------ */
+  /* Course detail (shared dispatcher)                                   */
+  /* ------------------------------------------------------------------ */
+  async function renderCourse(sectionId) {
+    if (!Number.isFinite(sectionId) || sectionId <= 0) {
+      $("#view").innerHTML = errorState("Mã lớp học phần không hợp lệ.");
+      return;
+    }
+    if (state.role === "STAFF") return renderStaffCourse(sectionId);
+    return renderStudentCourse(sectionId);
+  }
+
+  function field({ id, label, type = "text", value = "", options = null, required = false, span = false, placeholder = "", step = "" }) {
+    const req = required ? " required" : "";
+    let input;
+    if (type === "select") {
+      input = `<select class="form-select" id="${id}"${req}>${options
+        .map((option) => `<option value="${escapeHtml(option.value)}" ${String(option.value) === String(value) ? "selected" : ""}>${escapeHtml(option.label)}</option>`)
+        .join("")}</select>`;
+    } else if (type === "textarea") {
+      input = `<textarea class="form-control" id="${id}" rows="3"${req} placeholder="${escapeHtml(placeholder)}">${escapeHtml(value)}</textarea>`;
+    } else {
+      input = `<input class="form-control" id="${id}" type="${type}" value="${escapeHtml(value)}"${req}${step ? ` step="${step}"` : ""} placeholder="${escapeHtml(placeholder)}">`;
+    }
+    return `<div class="${span ? "span-2" : ""}"><label class="form-label" for="${id}">${escapeHtml(label)}${required ? ' <span class="text-danger">*</span>' : ""}</label>${input}</div>`;
+  }
+
+  function modalFooter(submitId, label = "Lưu") {
+    return `<button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button><button type="button" class="btn btn-pink" id="${submitId}">${escapeHtml(label)}</button>`;
+  }
+
+  function courseHero(section, extraBadges = []) {
+    const badges = [
+      semesterLabel(section),
+      section.DayOfWeek
+        ? `${dayName(section.DayOfWeek)} ${formatTime(section.StartTime)}–${formatTime(section.EndTime)}`
+        : "",
+      section.RoomCode ? `Phòng ${section.RoomCode}` : "",
+      ...extraBadges,
+    ].filter(Boolean);
+    return `<section class="course-hero">
+      <div class="kicker">${escapeHtml(section.ComponentName || section.ComponentType || "Học phần")} · ${escapeHtml(section.SectionCode || "")}</div>
+      <h1>${escapeHtml(section.CourseName || "Khoá học")}</h1>
+      <p>${escapeHtml(section.CourseCode || "")} · ${escapeHtml(section.InstructorName || state.user?.FullName || "Chưa phân công")}${section.FacultyName ? ` · ${escapeHtml(section.FacultyName)}` : ""}</p>
+      <div class="hero-badges">${badges.map((badge) => `<span>${escapeHtml(badge)}</span>`).join("")}</div>
+    </section>`;
+  }
+
+  function courseCrumbs(section) {
+    return `<a href="#/dashboard">Trang chủ</a><span>›</span><a href="#/courses">${state.role === "STAFF" ? "Lớp tôi dạy" : "Các khoá học của tôi"}</a><span>›</span><span>${escapeHtml(section.SectionCode || "")}</span>`;
+  }
+
+  function tabsMarkup(tabs, active) {
+    return `<div class="tabs" role="tablist">${tabs
+      .map((tab) => `<button type="button" role="tab" data-tab="${tab.id}" class="${tab.id === active ? "active" : ""}" aria-selected="${tab.id === active}">${escapeHtml(tab.label)}</button>`)
+      .join("")}</div>`;
+  }
+
+  function bindTabs(handler, initial) {
+    $$("#view .tabs [data-tab]").forEach((button) => {
+      button.addEventListener("click", () => {
+        $$("#view .tabs [data-tab]").forEach((item) => {
+          item.classList.toggle("active", item === button);
+          item.setAttribute("aria-selected", String(item === button));
+        });
+        handler(button.dataset.tab);
+      });
+    });
+    handler(initial);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Student course                                                      */
+  /* ------------------------------------------------------------------ */
+  async function renderStudentCourse(sectionId) {
+    const results = await Promise.allSettled([
+      api(`/api/student/sections/${sectionId}`),
+      api(`/api/student/sections/${sectionId}/announcements`),
+      api(`/api/student/sections/${sectionId}/resources`),
+      api(`/api/student/sections/${sectionId}/assessments`),
+      loadGrades(),
+    ]);
+    if (results[0].status !== "fulfilled") {
+      throw new Error(results[0].reason?.message || "Không mở được lớp học phần.");
+    }
+    const data = {
+      section: results[0].value.data,
+      announcements: results[1].status === "fulfilled" ? results[1].value.data || [] : [],
+      resources: results[2].status === "fulfilled" ? results[2].value.data || [] : [],
+      assessments: results[3].status === "fulfilled" ? results[3].value.data || [] : [],
+      grades: results[4].status === "fulfilled" ? results[4].value || [] : [],
+    };
+    state.studentCourse = data;
+    const tabs = [
+      { id: "overview", label: "Tổng quan" },
+      { id: "announcements", label: "Thông báo" },
+      { id: "resources", label: "Tài liệu" },
+      { id: "assessments", label: "Bài tập & Quiz" },
+      { id: "grades", label: "Điểm" },
+    ];
+    $("#view").innerHTML = `
+      <div class="page-head"><div class="breadcrumb-bar">${courseCrumbs(data.section)}</div></div>
+      ${courseHero(data.section, [data.section.EnrollmentStatus || "ACTIVE"])}
+      ${tabsMarkup(tabs, state.courseTab)}
+      <div id="courseTabContent"></div>`;
+    bindTabs(renderStudentCourseTab, state.courseTab);
+  }
+
+  function renderStudentCourseTab(tab) {
+    state.courseTab = tab;
+    const data = state.studentCourse;
+    if (!data) return;
+    const container = $("#courseTabContent");
+    const section = data.section;
+    if (tab === "overview") {
+      container.innerHTML = `
+        <div class="profile-grid mb-3">
+          ${detailItem("Số tín chỉ", formatNumber(section.Credits))}
+          ${detailItem("Điểm trung bình", section.AverageScore == null ? "—" : formatPercent(section.AverageScore))}
+          ${detailItem("Sĩ số", `${formatNumber(section.Capacity)} chỗ`)}
+          ${detailItem("Trạng thái lớp", section.SectionStatus)}
+          ${detailItem("Ngày ghi danh", formatDate(section.EnrollmentDate))}
+          ${detailItem("Giảng viên", section.InstructorName)}
+          ${detailItem("Email giảng viên", section.InstructorEmail)}
+          ${detailItem("Khoa", [section.FacultyName, section.FacultyNameEN].filter(Boolean).join(" · "))}
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="panel h-100">
+              <div class="panel-head"><div><h3>Thông báo mới nhất</h3><p>Từ giảng viên phụ trách</p></div></div>
+              <div class="panel-body">${announcementList(data.announcements.slice(0, 2))}</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="panel h-100">
+              <div class="panel-head"><div><h3>Tài liệu học tập</h3><p>Tài nguyên được chia sẻ trong lớp</p></div></div>
+              <div class="panel-body">${resourceList(data.resources.slice(0, 3))}</div>
+            </div>
+          </div>
+        </div>`;
+      return;
+    }
+    if (tab === "announcements") {
+      container.innerHTML = `<div class="panel"><div class="panel-head"><div><h3>Thông báo</h3><p>${formatNumber(data.announcements.length)} thông báo</p></div></div><div class="panel-body">${announcementList(data.announcements)}</div></div>`;
+      return;
+    }
+    if (tab === "resources") {
+      container.innerHTML = `<div class="panel"><div class="panel-head"><div><h3>Tài liệu</h3><p>${formatNumber(data.resources.length)} tài liệu</p></div></div><div class="panel-body">${resourceList(data.resources)}</div></div>`;
+      return;
+    }
+    if (tab === "assessments") {
+      container.innerHTML = `<div class="panel"><div class="panel-head"><div><h3>Bài tập & Quiz</h3><p>${formatNumber(data.assessments.length)} hoạt động đánh giá</p></div></div><div class="panel-body">
+        ${data.assessments.length ? `<div class="stack">${data.assessments.map(assessmentRow).join("")}</div>` : emptyState("Chưa có hoạt động đánh giá")}
+      </div></div>`;
+      container.querySelectorAll("[data-open-assessment]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const assessment = data.assessments.find((row) => Number(row.AssessmentID) === Number(button.dataset.openAssessment));
+          if (!assessment) return;
+          if (assessment.AssessmentType === "QUIZ") openQuizModal(assessment.AssessmentID);
+          else openAssignmentModal(assessment.AssessmentID, section.SectionID);
+        });
+      });
+      return;
+    }
+    if (tab === "grades") {
+      const grades = data.grades.filter((grade) => grade.SectionCode === section.SectionCode);
+      container.innerHTML = `<div class="panel"><div class="panel-head"><div><h3>Điểm của tôi trong lớp</h3><p>Chỉ đầu điểm đã công bố</p></div></div>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Đầu điểm</th><th>Điểm</th><th>Tối đa</th><th>Phần trăm</th><th>Ngày chấm</th></tr></thead>
+        <tbody>${grades.length ? grades.map((grade) => `<tr><td class="cell-primary">${escapeHtml(grade.Title)}</td><td class="mono">${formatNumber(grade.Score)}</td><td class="mono cell-muted">${formatNumber(grade.MaxScore)}</td><td class="mono">${formatPercent(grade.ScorePercent)}</td><td class="cell-muted">${escapeHtml(formatDate(grade.GradedAt))}</td></tr>`).join("") : '<tr><td colspan="5" class="cell-muted">Chưa có điểm được công bố.</td></tr>'}</tbody></table></div></div>`;
+    }
+  }
+
+  function courseMetaText() {
+    const section = state.studentCourse?.section || {};
+    return [section.CourseCode, section.SectionCode].filter(Boolean).join(" · ");
+  }
+
+  function detailItem(key, value) {
+    return `<div class="detail-item"><div class="k">${escapeHtml(key)}</div><div class="v">${escapeHtml(value == null || value === "" ? "—" : value)}</div></div>`;
+  }
+
+  function announcementList(rows) {
+    if (!rows.length) return emptyState("Chưa có thông báo", "", "📣");
+    return `<div class="stack">${rows.map((row) => `<div class="list-row">
+      <div class="list-row-flex"><span class="row-icon">${icon("megaphone")}</span>
+        <div class="list-row-main"><div class="list-row-title">${escapeHtml(row.Title)}</div>
+        <div class="list-row-meta">${escapeHtml(formatDate(row.PostedAt))}${row.ExpiredAt ? ` · hết hạn ${escapeHtml(formatDate(row.ExpiredAt))}` : ""}</div>
+        <div class="mt-1" style="white-space:pre-line">${escapeHtml(row.Content || "")}</div></div></div>
+    </div>`).join("")}</div>`;
+  }
+
+  function resourceList(rows) {
+    if (!rows.length) return emptyState("Chưa có tài liệu", "", "📄");
+    return `<div class="stack">${rows.map((row) => `<div class="list-row">
+      <div class="list-row-flex"><span class="row-icon">${icon("file")}</span>
+        <div class="list-row-main"><div class="list-row-title">${escapeHtml(row.Title)}</div>
+        <div class="list-row-meta">${escapeHtml(row.ResourceType || "Tài liệu")}${row.Description ? ` · ${escapeHtml(row.Description)}` : ""}</div>
+        ${row.ResourceURL ? `<a class="cell-muted" href="${escapeHtml(row.ResourceURL)}" target="_blank" rel="noopener">${escapeHtml(row.ResourceURL)}</a>` : ""}</div></div>
+    </div>`).join("")}</div>`;
+  }
+
+  function assessmentRow(row) {
+    const isQuiz = row.AssessmentType === "QUIZ";
+    const due = isQuiz ? row.CloseTime : row.DueDate;
+    const scored = row.Score != null;
+    return `<div class="list-row">
+      <div class="list-row-flex">
+        <span class="row-icon">${icon(isQuiz ? "clock" : "file")}</span>
+        <div class="list-row-main">
+          <div class="list-row-title">${escapeHtml(row.Title)}</div>
+          <div class="list-row-meta">${isQuiz ? "Quiz" : "Bài tập"} · ${isQuiz ? "Đóng" : "Hạn"}: ${escapeHtml(formatDate(due))}${isQuiz && row.DurationMinutes ? ` · ${formatNumber(row.DurationMinutes)} phút` : ""}</div>
+          <div class="list-row-meta">Điểm tối đa ${formatNumber(row.MaxScore)}${row.SubmissionCount != null ? ` · ${formatNumber(row.SubmissionCount)} lượt nộp` : ""}</div>
+        </div>
+      </div>
+      <div class="list-row-side">
+        ${scored ? `<span class="badge-soft active">${formatNumber(row.Score)}/${formatNumber(row.MaxScore)}</span>` : '<span class="badge-soft neutral">Chưa chấm</span>'}
+        <button type="button" class="btn btn-soft btn-sm" data-open-assessment="${escapeHtml(row.AssessmentID)}">Mở</button>
+      </div>
+    </div>`;
+  }
+
+  /* -------- assignment modal ---------------------------------------- */
+  async function openAssignmentModal(assessmentId, sectionId) {
+    const body = openModal({
+      title: "Chi tiết bài tập",
+      size: "lg",
+      body: loadingState(),
+      footer: '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>',
+    });
+    try {
+      const data = (await api(`/api/student/assignments/${assessmentId}`)).data || {};
+      const submissions = data.submissions || [];
+      const canSubmit = submissions.length < Number(data.MaxAttempts || 1);
+      body.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
+          <div>
+            <h3 class="h5 mb-1">${escapeHtml(data.Title)}</h3>
+            <div class="cell-muted">${escapeHtml(courseMetaText())} · Hạn ${escapeHtml(formatDate(data.DueDate))}</div>
+          </div>
+          <span class="badge-soft">Tối đa ${formatNumber(data.MaxScore)} điểm</span>
+        </div>
+        <p style="white-space:pre-line">${escapeHtml(data.Description || "Không có mô tả.")}</p>
+        <div class="profile-grid mb-3">
+          ${detailItem("Mở lúc", formatDate(data.OpenDate))}
+          ${detailItem("Hạn nộp", formatDate(data.DueDate))}
+          ${detailItem("Nộp muộn", Number(data.AllowLateSubmission) ? "Được phép" : "Không được phép")}
+          ${detailItem("Lượt nộp của bạn", formatNumber(submissions.length))}
+        </div>
+        ${(data.attachments || []).length ? `<h4 class="h6">Tệp đính kèm</h4><div class="stack mb-3">${data.attachments.map((file) => {
+          const url = file.AttachmentURL || "";
+          const name = url.split("/").filter(Boolean).pop() || "Tệp đính kèm";
+          return `<div class="list-row"><div class="list-row-flex"><span class="row-icon">${icon("file")}</span><div class="list-row-main"><div class="list-row-title">${escapeHtml(name)}</div><div class="list-row-meta">${escapeHtml(url)}</div></div></div></div>`;
+        }).join("")}</div>` : ""}
+        <h4 class="h6">Bài nộp của bạn</h4>
+        ${submissions.length ? `<div class="table-responsive mb-3"><table class="table"><thead><tr><th>Lần</th><th>Nộp lúc</th><th>Trạng thái</th><th>Điểm</th><th>Muộn</th><th>Tệp</th></tr></thead><tbody>${submissions.map((submission) => `<tr>
+          <td>${escapeHtml(submission.AttemptNo)}</td>
+          <td class="cell-muted">${escapeHtml(formatDate(submission.SubmittedAt))}</td>
+          <td>${statusBadge(submission.SubmissionStatus)}</td>
+          <td class="mono">${submission.Score == null ? "—" : formatNumber(submission.Score)}</td>
+          <td>${Number(submission.IsLate) ? '<span class="badge-soft dropped">Muộn</span>' : '<span class="badge-soft active">Đúng hạn</span>'}</td>
+          <td class="cell-muted">${(submission.files || []).map((file) => escapeHtml(file.FileName)).join(", ") || "—"}</td>
+        </tr>`).join("")}</tbody></table></div>` : '<p class="cell-muted">Bạn chưa nộp bài lần nào.</p>'}
+        <hr>
+        ${canSubmit
+          ? `<h4 class="h6">Nộp bài mới</h4>
+        <div class="field-grid">
+          ${field({ id: "subFileName", label: "Tên tệp", value: "bai-nop.pdf", required: true })}
+          ${field({ id: "subFileUrl", label: "Đường dẫn tệp", value: "/uploads/bai-nop.pdf", required: true })}
+          ${field({ id: "subFileSize", label: "Kích thước (bytes)", type: "number", value: "1024", span: true })}
+        </div>
+        <p class="cell-muted mt-2 mb-0">Bản demo chỉ lưu metadata tệp trong bảng <code>SubmissionFile</code>, không tải tệp nhị phân thật.</p>`
+          : '<p class="cell-muted mb-0">Bạn đã đạt số lần nộp tối đa.</p>'}`;
+      $("#appModalFooter").innerHTML = `<button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>${canSubmit ? '<button type="button" class="btn btn-pink" id="submitAssignmentBtn">Nộp bài</button>' : ""}`;
+      if (canSubmit) $("#submitAssignmentBtn").addEventListener("click", async () => {
+        const restore = setBusy($("#submitAssignmentBtn"), "Đang nộp…");
+        try {
+          await api(`/api/student/assignments/${assessmentId}/submissions`, {
+            method: "POST",
+            body: {
+              file_name: $("#subFileName").value.trim(),
+              file_url: $("#subFileUrl").value.trim(),
+              file_size: Number($("#subFileSize").value) || 0,
+            },
+          });
+          notify("Đã nộp bài.", "success");
+          closeModal();
+          await renderStudentCourse(sectionId);
+        } catch (error) {
+          notify(error.message, "danger");
+          restore();
+        }
+      });
+    } catch (error) {
+      body.innerHTML = errorState(error.message);
+    }
+  }
+
+  /* -------- quiz modal ----------------------------------------------- */
+  async function openQuizModal(assessmentId) {
+    const body = openModal({
+      title: "Quiz",
+      size: "lg",
+      body: loadingState(),
+      footer: '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>',
+    });
+    try {
+      const data = (await api(`/api/student/quizzes/${assessmentId}`)).data || {};
+      const attempts = data.attempts || [];
+      body.innerHTML = `
+        <h3 class="h5 mb-1">${escapeHtml(data.Title)}</h3>
+        <div class="cell-muted mb-3">${escapeHtml(courseMetaText())}</div>
+        <p style="white-space:pre-line">${escapeHtml(data.Description || "Không có mô tả.")}</p>
+        <div class="profile-grid mb-3">
+          ${detailItem("Mở lúc", formatDate(data.OpenTime))}
+          ${detailItem("Đóng lúc", formatDate(data.CloseTime))}
+          ${detailItem("Thời lượng", `${formatNumber(data.DurationMinutes)} phút`)}
+          ${detailItem("Số lượt tối đa", formatNumber(data.MaxAttempts))}
+        </div>
+        <h4 class="h6">Các lượt làm bài</h4>
+        ${attempts.length ? `<div class="table-responsive"><table class="table"><thead><tr><th>Lần</th><th>Bắt đầu</th><th>Kết thúc</th><th>Điểm</th><th></th></tr></thead><tbody>${attempts.map((attempt) => `<tr>
+          <td>${escapeHtml(attempt.AttemptNo)}</td>
+          <td class="cell-muted">${escapeHtml(formatDate(attempt.StartedAt))}</td>
+          <td class="cell-muted">${escapeHtml(formatDate(attempt.FinishedAt))}</td>
+          <td class="mono">${attempt.Score == null ? "—" : formatNumber(attempt.Score)}</td>
+          <td class="text-end">${attempt.FinishedAt ? "" : `<div class="d-flex gap-1 justify-content-end"><input class="form-control form-control-sm" style="width:80px" type="number" min="0" step="0.1" value="0" id="quiz-score-${attempt.AttemptID}"><button class="btn btn-soft btn-sm" data-finish-attempt="${escapeHtml(attempt.AttemptID)}">Kết thúc</button></div>`}</td>
+        </tr>`).join("")}</tbody></table></div>` : '<p class="cell-muted">Bạn chưa làm lượt nào.</p>'}`;
+      const canStart = attempts.length < Number(data.MaxAttempts || 1);
+      $("#appModalFooter").innerHTML = `<button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>${canStart ? '<button type="button" class="btn btn-pink" id="startQuizBtn">Bắt đầu lượt mới</button>' : ""}`;
+      if (canStart) $("#startQuizBtn").addEventListener("click", async () => {
+        const restore = setBusy($("#startQuizBtn"), "Đang tạo lượt…");
+        try {
+          await api(`/api/student/quizzes/${assessmentId}/attempts`, { method: "POST" });
+          notify("Đã bắt đầu lượt làm bài.", "success");
+          await openQuizModal(assessmentId);
+        } catch (error) {
+          notify(error.message, "danger");
+          restore();
+        }
+      });
+      body.querySelectorAll("[data-finish-attempt]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const scoreInput = $(`#quiz-score-${button.dataset.finishAttempt}`);
+          const restore = setBusy(button, "…");
+          try {
+            await api(`/api/student/quiz-attempts/${button.dataset.finishAttempt}/finish`, {
+              method: "PATCH",
+              body: { score: Number(scoreInput.value) || 0 },
+            });
+            notify("Đã kết thúc lượt làm bài.", "success");
+            await openQuizModal(assessmentId);
+          } catch (error) {
+            notify(error.message, "danger");
+            restore();
+          }
+        });
+      });
+    } catch (error) {
+      body.innerHTML = errorState(error.message);
+    }
+  }
+  /* ------------------------------------------------------------------ */
+  /* Staff course                                                        */
+  /* ------------------------------------------------------------------ */
+  async function renderStaffCourse(sectionId) {
+    const courses = await loadCourses(true);
+    const section = courses.find((row) => Number(row.SectionID) === Number(sectionId));
+    if (!section) throw new Error("Bạn không phụ trách lớp học phần này.");
+    const results = await Promise.allSettled([
+      api(`/api/staff/sections/${sectionId}/students`),
+      api(`/api/staff/sections/${sectionId}/announcements`),
+      api(`/api/staff/sections/${sectionId}/resources`),
+      api(`/api/staff/sections/${sectionId}/assessments`),
+      api(`/api/staff/sections/${sectionId}/submissions`),
+      api(`/api/staff/sections/${sectionId}/grades`),
+      api(`/api/staff/sections/${sectionId}/quiz-attempts`),
+    ]);
+    const pick = (index) => (results[index].status === "fulfilled" ? results[index].value.data || [] : []);
+    const data = {
+      section,
+      students: pick(0),
+      announcements: pick(1),
+      resources: pick(2),
+      assessments: pick(3),
+      submissions: pick(4),
+      grades: pick(5),
+      attempts: pick(6),
+    };
+    state.staffCourse = data;
+    const tabs = [
+      { id: "overview", label: "Tổng quan" },
+      { id: "students", label: "Sinh viên" },
+      { id: "announcements", label: "Thông báo" },
+      { id: "resources", label: "Tài liệu" },
+      { id: "assessments", label: "Bài tập & Quiz" },
+      { id: "submissions", label: "Bài nộp" },
+      { id: "grades", label: "Điểm" },
+    ];
+    $("#view").innerHTML = `
+      <div class="page-head"><div class="breadcrumb-bar">${courseCrumbs(section)}</div></div>
+      ${courseHero(section, [`${formatNumber(data.students.length)} sinh viên`])}
+      ${tabsMarkup(tabs, state.courseTab)}
+      <div id="courseTabContent"></div>`;
+    bindTabs(renderStaffCourseTab, state.courseTab);
+  }
+
+  function renderStaffCourseTab(tab) {
+    state.courseTab = tab;
+    const data = state.staffCourse;
+    if (!data) return;
+    const container = $("#courseTabContent");
+    const section = data.section;
+    const sectionId = Number(section.SectionID);
+    if (tab === "overview") {
+      const ungraded = data.submissions.filter((row) => row.Score == null).length;
+      container.innerHTML = `
+        <div class="stat-grid mb-3">
+          <article class="stat-card" style="--accent:var(--pink-500)"><div class="stat-label">Sinh viên</div><div class="stat-value">${formatNumber(data.students.length)}</div><div class="stat-hint">${formatNumber(section.Capacity)} chỗ</div></article>
+          <article class="stat-card" style="--accent:#c11c84"><div class="stat-label">Hoạt động</div><div class="stat-value">${formatNumber(data.assessments.length)}</div><div class="stat-hint">Bài tập và quiz</div></article>
+          <article class="stat-card" style="--accent:#a63d7f"><div class="stat-label">Bài nộp</div><div class="stat-value">${formatNumber(data.submissions.length)}</div><div class="stat-hint">${formatNumber(ungraded)} chờ chấm</div></article>
+          <article class="stat-card" style="--accent:#d76b8f"><div class="stat-label">Đầu điểm</div><div class="stat-value">${formatNumber(data.grades.length)}</div><div class="stat-hint">Đã ghi nhận</div></article>
+        </div>
+        <div class="panel mb-3">
+          <div class="panel-head"><div><h3>Thao tác nhanh</h3><p>Bổ sung nội dung cho lớp</p></div></div>
+          <div class="panel-body d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-pink btn-sm" data-add-announcement>${icon("megaphone")} Thông báo</button>
+            <button type="button" class="btn btn-soft btn-sm" data-add-resource>${icon("file")} Tài liệu</button>
+            <button type="button" class="btn btn-soft btn-sm" data-add-assignment>${icon("file")} Bài tập</button>
+            <button type="button" class="btn btn-soft btn-sm" data-add-quiz>${icon("clock")} Quiz</button>
+            <button type="button" class="btn btn-soft btn-sm" data-add-grade>${icon("award")} Đầu điểm</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>Bài nộp gần đây</h3><p>5 lượt nộp mới nhất</p></div><button class="btn btn-light btn-sm" data-go-tab="submissions">Xem tất cả</button></div>
+          <div class="panel-body">${submissionsPreview(data.submissions.slice(0, 5))}</div>
+        </div>`;
+      bindStaffOverviewActions(sectionId, data);
+      return;
+    }
+    if (tab === "students") {
+      container.innerHTML = `<div class="panel"><div class="panel-head"><div><h3>Sinh viên trong lớp</h3><p>${formatNumber(data.students.length)} ghi danh</p></div></div>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Họ tên</th><th>MSSV</th><th>Email</th><th>Ngày ghi danh</th><th>Trạng thái</th></tr></thead>
+        <tbody>${data.students.length ? data.students.map((row) => `<tr><td class="cell-primary">${escapeHtml(row.StudentName)}</td><td>${escapeHtml(row.StudentCode)}</td><td class="cell-muted">${escapeHtml(row.StudentEmail)}</td><td class="cell-muted">${escapeHtml(formatDate(row.EnrollmentDate))}</td><td>${statusBadge(row.EnrollmentStatus)}</td></tr>`).join("") : '<tr><td colspan="5" class="cell-muted">Chưa có sinh viên.</td></tr>'}</tbody></table></div></div>`;
+      return;
+    }
+    if (tab === "announcements") {
+      container.innerHTML = `<div class="toolbar"><span class="cell-muted">${formatNumber(data.announcements.length)} thông báo</span><button type="button" class="btn btn-pink btn-sm" data-add-announcement>${icon("plus")} Thêm thông báo</button></div>
+        <div class="panel"><div class="panel-body">${staffAnnouncementList(data.announcements, sectionId)}</div></div>`;
+      bindAnnouncementActions(sectionId);
+      return;
+    }
+    if (tab === "resources") {
+      container.innerHTML = `<div class="toolbar"><span class="cell-muted">${formatNumber(data.resources.length)} tài liệu</span><button type="button" class="btn btn-pink btn-sm" data-add-resource>${icon("plus")} Thêm tài liệu</button></div>
+        <div class="panel"><div class="panel-body">${staffResourceList(data.resources, sectionId)}</div></div>`;
+      bindResourceActions(sectionId);
+      return;
+    }
+    if (tab === "assessments") {
+      container.innerHTML = `<div class="toolbar"><span class="cell-muted">${formatNumber(data.assessments.length)} hoạt động</span>
+        <div class="right"><button type="button" class="btn btn-soft btn-sm" data-add-assignment>${icon("plus")} Bài tập</button><button type="button" class="btn btn-pink btn-sm" data-add-quiz>${icon("plus")} Quiz</button></div></div>
+        <div class="panel"><div class="panel-body">${staffAssessmentList(data.assessments, sectionId)}</div></div>`;
+      bindAssessmentActions(sectionId, data);
+      return;
+    }
+    if (tab === "submissions") {
+      container.innerHTML = `<div class="panel"><div class="panel-head"><div><h3>Bài nộp</h3><p>${formatNumber(data.submissions.length)} lượt nộp</p></div></div>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Sinh viên</th><th>Bài tập</th><th>Lần</th><th>Nộp lúc</th><th>Điểm</th><th></th></tr></thead>
+        <tbody>${data.submissions.length ? data.submissions.map((row) => `<tr>
+          <td class="cell-primary">${escapeHtml(row.StudentName)}</td>
+          <td>${escapeHtml(row.AssignmentTitle)}</td>
+          <td>${escapeHtml(row.AttemptNo)}</td>
+          <td class="cell-muted">${escapeHtml(formatDate(row.SubmittedAt))}</td>
+          <td class="mono">${row.Score == null ? '<span class="badge-soft neutral">Chưa chấm</span>' : formatNumber(row.Score)}</td>
+          <td class="text-end"><button class="btn btn-soft btn-sm" data-grade-submission="${escapeHtml(row.SubmissionID)}" data-student="${escapeHtml(row.StudentName)}" data-title="${escapeHtml(row.AssignmentTitle)}" data-score="${row.Score == null ? "" : escapeHtml(row.Score)}">Chấm điểm</button></td>
+        </tr>`).join("") : '<tr><td colspan="6" class="cell-muted">Chưa có bài nộp.</td></tr>'}</tbody></table></div></div>`;
+      bindSubmissionActions(sectionId);
+      return;
+    }
+    if (tab === "grades") {
+      container.innerHTML = `<div class="toolbar"><span class="cell-muted">${formatNumber(data.grades.length)} đầu điểm</span><button type="button" class="btn btn-pink btn-sm" data-add-grade>${icon("plus")} Ghi đầu điểm</button></div>
+        <div class="panel"><div class="table-responsive"><table class="table"><thead><tr><th>Sinh viên</th><th>MSSV</th><th>Đầu điểm</th><th>Điểm</th><th>Tối đa</th><th>Công bố</th><th>Ngày chấm</th></tr></thead>
+        <tbody>${data.grades.length ? data.grades.map((row) => `<tr><td class="cell-primary">${escapeHtml(row.StudentName)}</td><td>${escapeHtml(row.StudentCode)}</td><td>${escapeHtml(row.AssessmentTitle)}</td><td class="mono">${formatNumber(row.Score)}</td><td class="mono cell-muted">${formatNumber(row.MaxScore)}</td><td>${Number(row.IsPublished) ? '<span class="badge-soft active">Đã công bố</span>' : '<span class="badge-soft neutral">Ẩn</span>'}</td><td class="cell-muted">${escapeHtml(formatDate(row.GradedAt))}</td></tr>`).join("") : '<tr><td colspan="7" class="cell-muted">Chưa có đầu điểm.</td></tr>'}</tbody></table></div></div>`;
+      bindAddGradeAction(sectionId, data);
+    }
+  }
+
+  function submissionsPreview(rows) {
+    if (!rows.length) return emptyState("Chưa có bài nộp");
+    return `<div class="stack">${rows.map((row) => `<div class="list-row">
+      <div class="list-row-flex"><span class="row-icon">${icon("file")}</span>
+        <div class="list-row-main"><div class="list-row-title">${escapeHtml(row.StudentName)}</div>
+        <div class="list-row-meta">${escapeHtml(row.AssignmentTitle)} · lần ${escapeHtml(row.AttemptNo)} · ${escapeHtml(formatDate(row.SubmittedAt))}</div></div></div>
+      <span class="list-row-side">${row.Score == null ? '<span class="badge-soft neutral">Chưa chấm</span>' : `<span class="badge-soft active">${formatNumber(row.Score)} điểm</span>`}</span>
+    </div>`).join("")}</div>`;
+  }
+
+  function staffAnnouncementList(rows, sectionId) {
+    if (!rows.length) return emptyState("Chưa có thông báo", "", "📣");
+    return `<div class="stack">${rows.map((row) => `<div class="list-row">
+      <div class="list-row-flex"><span class="row-icon">${icon("megaphone")}</span>
+        <div class="list-row-main"><div class="list-row-title">${escapeHtml(row.Title)}</div>
+        <div class="list-row-meta">${escapeHtml(formatDate(row.PostedAt))}</div>
+        <div class="mt-1" style="white-space:pre-line">${escapeHtml(row.Content || "")}</div></div></div>
+      <span class="list-row-side"><button class="btn btn-light btn-sm" data-del-announcement="${escapeHtml(row.AnnouncementID)}">Xóa</button></span>
+    </div>`).join("")}</div>`;
+  }
+
+  function staffResourceList(rows, sectionId) {
+    if (!rows.length) return emptyState("Chưa có tài liệu", "", "📄");
+    return `<div class="stack">${rows.map((row) => `<div class="list-row">
+      <div class="list-row-flex"><span class="row-icon">${icon("file")}</span>
+        <div class="list-row-main"><div class="list-row-title">${escapeHtml(row.Title)}</div>
+        <div class="list-row-meta">${escapeHtml(row.ResourceType || "Tài liệu")} · ${escapeHtml(row.ResourceURL || "")}</div></div></div>
+      <span class="list-row-side"><button class="btn btn-light btn-sm" data-unpost="${escapeHtml(row.ResourceID)}">Gỡ</button></span>
+    </div>`).join("")}</div>`;
+  }
+
+  function staffAssessmentList(rows, sectionId) {
+    if (!rows.length) return emptyState("Chưa có bài tập hoặc quiz");
+    return `<div class="stack">${rows.map((row) => {
+      const isQuiz = row.AssessmentType === "QUIZ";
+      const due = isQuiz ? row.CloseTime : row.DueDate;
+      return `<div class="list-row">
+        <div class="list-row-flex"><span class="row-icon">${icon(isQuiz ? "clock" : "file")}</span>
+          <div class="list-row-main"><div class="list-row-title">${escapeHtml(row.Title)}</div>
+          <div class="list-row-meta">${isQuiz ? "Quiz" : "Bài tập"} · ${escapeHtml(formatDate(due))} · tối đa ${formatNumber(row.MaxScore)} điểm${!isQuiz ? ` · ${formatNumber(row.SubmissionCount)} lượt nộp` : ""}</div></div></div>
+        <span class="list-row-side"><button class="btn btn-light btn-sm" data-del-assessment="${escapeHtml(row.AssessmentID)}">Xóa</button></span>
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  function bindStaffOverviewActions(sectionId, data) {
+    const container = $("#courseTabContent");
+    container.querySelector("[data-add-announcement]")?.addEventListener("click", () => openAnnouncementModal(sectionId));
+    container.querySelector("[data-add-resource]")?.addEventListener("click", () => openResourceModal(sectionId));
+    container.querySelector("[data-add-assignment]")?.addEventListener("click", () => openAssignmentCreateModal(sectionId));
+    container.querySelector("[data-add-quiz]")?.addEventListener("click", () => openQuizCreateModal(sectionId));
+    container.querySelector("[data-add-grade]")?.addEventListener("click", () => openUpsertGradeModal(sectionId, data));
+    container.querySelector("[data-go-tab]")?.addEventListener("click", () => {
+      $$("#view .tabs [data-tab]").forEach((item) => item.classList.toggle("active", item.dataset.tab === "submissions"));
+      renderStaffCourseTab("submissions");
+    });
+  }
+
+  function bindAnnouncementActions(sectionId) {
+    const container = $("#courseTabContent");
+    container.querySelector("[data-add-announcement]")?.addEventListener("click", () => openAnnouncementModal(sectionId));
+    container.querySelectorAll("[data-del-announcement]").forEach((button) => {
+      button.addEventListener("click", () => {
+        confirmAction("Xóa thông báo này khỏi lớp?", async () => {
+          try {
+            await api(`/api/staff/announcements/${button.dataset.delAnnouncement}`, { method: "DELETE" });
+            notify("Đã xóa thông báo.", "success");
+            await renderStaffCourse(sectionId);
+          } catch (error) {
+            notify(error.message, "danger");
+          }
+        });
+      });
+    });
+  }
+
+  function bindResourceActions(sectionId) {
+    const container = $("#courseTabContent");
+    container.querySelector("[data-add-resource]")?.addEventListener("click", () => openResourceModal(sectionId));
+    container.querySelectorAll("[data-unpost]").forEach((button) => {
+      button.addEventListener("click", () => {
+        confirmAction("Gỡ tài liệu này khỏi lớp?", async () => {
+          try {
+            await api(`/api/staff/sections/${sectionId}/resources/${button.dataset.unpost}`, { method: "DELETE" });
+            notify("Đã gỡ tài liệu.", "success");
+            await renderStaffCourse(sectionId);
+          } catch (error) {
+            notify(error.message, "danger");
+          }
+        });
+      });
+    });
+  }
+
+  function bindAssessmentActions(sectionId, data) {
+    const container = $("#courseTabContent");
+    container.querySelector("[data-add-assignment]")?.addEventListener("click", () => openAssignmentCreateModal(sectionId));
+    container.querySelector("[data-add-quiz]")?.addEventListener("click", () => openQuizCreateModal(sectionId));
+    container.querySelectorAll("[data-del-assessment]").forEach((button) => {
+      button.addEventListener("click", () => {
+        confirmAction("Xóa hoạt động đánh giá này? Các bài nộp và điểm liên quan có thể bị ảnh hưởng.", async () => {
+          try {
+            await api(`/api/staff/assessments/${button.dataset.delAssessment}`, { method: "DELETE" });
+            notify("Đã xóa hoạt động.", "success");
+            await renderStaffCourse(sectionId);
+          } catch (error) {
+            notify(error.message, "danger");
+          }
+        });
+      });
+    });
+  }
+
+  function bindSubmissionActions(sectionId) {
+    $$("#courseTabContent [data-grade-submission]").forEach((button) => {
+      button.addEventListener("click", () => {
+        openGradeModal(sectionId, {
+          id: button.dataset.gradeSubmission,
+          student: button.dataset.student,
+          title: button.dataset.title,
+          score: button.dataset.score,
+        });
+      });
+    });
+  }
+
+  function bindAddGradeAction(sectionId, data) {
+    $("#courseTabContent [data-add-grade]")?.addEventListener("click", () => openUpsertGradeModal(sectionId, data));
+  }
+
+  /* -------- staff modals -------------------------------------------- */
+  function openAnnouncementModal(sectionId) {
+    const body = openModal({
+      title: "Thêm thông báo",
+      body: `<div class="field-grid">
+        ${field({ id: "annTitle", label: "Tiêu đề", required: true, span: true })}
+        ${field({ id: "annContent", label: "Nội dung", type: "textarea", required: true, span: true })}
+        ${field({ id: "annExpired", label: "Hết hạn lúc", type: "datetime-local", span: true })}
+      </div>`,
+      footer: modalFooter("saveAnnouncement", "Đăng thông báo"),
+    });
+    $("#saveAnnouncement").addEventListener("click", async () => {
+      const restore = setBusy($("#saveAnnouncement"), "Đang đăng…");
+      try {
+        await api(`/api/staff/sections/${sectionId}/announcements`, {
+          method: "POST",
+          body: {
+            title: $("#annTitle").value.trim(),
+            content: $("#annContent").value.trim(),
+            expired_at: toMysqlDateTime($("#annExpired").value) || null,
+          },
+        });
+        notify("Đã đăng thông báo.", "success");
+        closeModal();
+        await renderStaffCourse(sectionId);
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  function openResourceModal(sectionId) {
+    const body = openModal({
+      title: "Thêm tài liệu",
+      body: `<div class="field-grid">
+        ${field({ id: "resTitle", label: "Tiêu đề", required: true, span: true })}
+        ${field({ id: "resDescription", label: "Mô tả", type: "textarea", span: true })}
+        ${field({ id: "resType", label: "Loại tài liệu", type: "select", value: "DOCUMENT", options: [
+          { value: "DOCUMENT", label: "Tài liệu" },
+          { value: "SLIDE", label: "Bài giảng" },
+          { value: "VIDEO", label: "Video" },
+          { value: "LINK", label: "Liên kết" },
+        ] })}
+        ${field({ id: "resUrl", label: "Đường dẫn", value: "/resources/tai-lieu.pdf", required: true })}
+      </div>`,
+      footer: modalFooter("saveResource", "Thêm tài liệu"),
+    });
+    $("#saveResource").addEventListener("click", async () => {
+      const restore = setBusy($("#saveResource"), "Đang thêm…");
+      try {
+        await api(`/api/staff/sections/${sectionId}/resources`, {
+          method: "POST",
+          body: {
+            title: $("#resTitle").value.trim(),
+            description: $("#resDescription").value.trim(),
+            resource_type: $("#resType").value,
+            resource_url: $("#resUrl").value.trim(),
+            display_order: 0,
+          },
+        });
+        notify("Đã thêm tài liệu.", "success");
+        closeModal();
+        await renderStaffCourse(sectionId);
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  function openAssignmentCreateModal(sectionId) {
+    const body = openModal({
+      title: "Tạo bài tập",
+      body: `<div class="field-grid">
+        ${field({ id: "asgTitle", label: "Tiêu đề", required: true, span: true })}
+        ${field({ id: "asgDescription", label: "Mô tả", type: "textarea", span: true })}
+        ${field({ id: "asgMaxScore", label: "Điểm tối đa", type: "number", value: "10", step: "0.1", required: true })}
+        ${field({ id: "asgMaxAttempts", label: "Số lần nộp tối đa", type: "number", value: "3", required: true })}
+        ${field({ id: "asgOpen", label: "Mở lúc", type: "datetime-local", required: true })}
+        ${field({ id: "asgDue", label: "Hạn nộp", type: "datetime-local", required: true })}
+        ${field({ id: "asgLate", label: "Cho phép nộp muộn", type: "select", value: "1", options: [
+          { value: "1", label: "Có" }, { value: "0", label: "Không" },
+        ], span: true })}
+      </div>`,
+      footer: modalFooter("saveAssignment", "Tạo bài tập"),
+    });
+    $("#saveAssignment").addEventListener("click", async () => {
+      const restore = setBusy($("#saveAssignment"), "Đang tạo…");
+      try {
+        await api(`/api/staff/sections/${sectionId}/assignments`, {
+          method: "POST",
+          body: {
+            title: $("#asgTitle").value.trim(),
+            description: $("#asgDescription").value.trim(),
+            max_score: Number($("#asgMaxScore").value) || 10,
+            max_attempts: Number($("#asgMaxAttempts").value) || 3,
+            open_date: toMysqlDateTime($("#asgOpen").value),
+            due_date: toMysqlDateTime($("#asgDue").value),
+            allow_late: $("#asgLate").value === "1",
+            attachments: [],
+          },
+        });
+        notify("Đã tạo bài tập.", "success");
+        closeModal();
+        await renderStaffCourse(sectionId);
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  function openQuizCreateModal(sectionId) {
+    const body = openModal({
+      title: "Tạo quiz",
+      body: `<div class="field-grid">
+        ${field({ id: "quizTitle", label: "Tiêu đề", required: true, span: true })}
+        ${field({ id: "quizDescription", label: "Mô tả", type: "textarea", span: true })}
+        ${field({ id: "quizMaxScore", label: "Điểm tối đa", type: "number", value: "10", step: "0.1", required: true })}
+        ${field({ id: "quizDuration", label: "Thời lượng (phút)", type: "number", value: "45", required: true })}
+        ${field({ id: "quizOpen", label: "Mở lúc", type: "datetime-local", required: true })}
+        ${field({ id: "quizClose", label: "Đóng lúc", type: "datetime-local", required: true })}
+      </div>`,
+      footer: modalFooter("saveQuiz", "Tạo quiz"),
+    });
+    $("#saveQuiz").addEventListener("click", async () => {
+      const restore = setBusy($("#saveQuiz"), "Đang tạo…");
+      try {
+        await api(`/api/staff/sections/${sectionId}/quizzes`, {
+          method: "POST",
+          body: {
+            title: $("#quizTitle").value.trim(),
+            description: $("#quizDescription").value.trim(),
+            max_score: Number($("#quizMaxScore").value) || 10,
+            max_attempts: 3,
+            open_time: toMysqlDateTime($("#quizOpen").value),
+            close_time: toMysqlDateTime($("#quizClose").value),
+            duration: Number($("#quizDuration").value) || 45,
+          },
+        });
+        notify("Đã tạo quiz.", "success");
+        closeModal();
+        await renderStaffCourse(sectionId);
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  function openGradeModal(sectionId, submission) {
+    const body = openModal({
+      title: "Chấm điểm bài nộp",
+      body: `<div class="mb-3"><div class="cell-primary">${escapeHtml(submission.student)}</div><div class="cell-muted">${escapeHtml(submission.title)}</div></div>
+        ${field({ id: "gradeScore", label: "Điểm", type: "number", value: submission.score || "0", step: "0.1", required: true })}`,
+      footer: modalFooter("saveGrade", "Lưu điểm"),
+    });
+    $("#saveGrade").addEventListener("click", async () => {
+      const restore = setBusy($("#saveGrade"), "Đang lưu…");
+      try {
+        await api(`/api/staff/submissions/${submission.id}/grade`, {
+          method: "PATCH",
+          body: { score: Number($("#gradeScore").value) || 0 },
+        });
+        notify("Đã chấm điểm.", "success");
+        closeModal();
+        await renderStaffCourse(sectionId);
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  function openUpsertGradeModal(sectionId, data) {
+    const studentOptions = data.students
+      .filter((row) => row.EnrollmentStatus === "ACTIVE")
+      .map((row) => ({ value: row.EnrollmentID, label: `${row.StudentCode} — ${row.StudentName}` }));
+    const assessmentOptions = data.assessments.map((row) => ({ value: row.AssessmentID, label: `${row.Title} (tối đa ${row.MaxScore})` }));
+    if (!studentOptions.length || !assessmentOptions.length) {
+      notify("Cần có sinh viên và hoạt động đánh giá trước khi ghi điểm.", "warning");
+      return;
+    }
+    const body = openModal({
+      title: "Ghi đầu điểm",
+      body: `<div class="field-grid">
+        ${field({ id: "upsertEnrollment", label: "Sinh viên", type: "select", options: studentOptions, span: true })}
+        ${field({ id: "upsertAssessment", label: "Đầu điểm", type: "select", options: assessmentOptions, span: true })}
+        ${field({ id: "upsertScore", label: "Điểm", type: "number", value: "0", step: "0.1", required: true })}
+        ${field({ id: "upsertPublished", label: "Công bố cho sinh viên", type: "select", value: "1", options: [
+          { value: "1", label: "Có" }, { value: "0", label: "Không" },
+        ] })}
+      </div>`,
+      footer: modalFooter("saveUpsertGrade", "Lưu đầu điểm"),
+    });
+    $("#saveUpsertGrade").addEventListener("click", async () => {
+      const restore = setBusy($("#saveUpsertGrade"), "Đang lưu…");
+      try {
+        await api(`/api/staff/sections/${sectionId}/grades`, {
+          method: "POST",
+          body: {
+            enrollment_id: Number($("#upsertEnrollment").value),
+            assessment_id: Number($("#upsertAssessment").value),
+            score: Number($("#upsertScore").value) || 0,
+            published: $("#upsertPublished").value === "1",
+          },
+        });
+        notify("Đã lưu đầu điểm.", "success");
+        closeModal();
+        await renderStaffCourse(sectionId);
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+  /* ------------------------------------------------------------------ */
+  /* Admin                                                               */
+  /* ------------------------------------------------------------------ */
+  const ADMIN_TABS = [
+    { id: "users", label: "Người dùng" },
+    { id: "faculties", label: "Khoa" },
+    { id: "semesters", label: "Học kỳ" },
+    { id: "courses", label: "Môn học" },
+    { id: "components", label: "Thành phần" },
+    { id: "sections", label: "Lớp học phần" },
+    { id: "data", label: "Dữ liệu" },
+  ];
+
+  async function renderAdmin(tab) {
+    state.adminTab = tab;
+    $("#view").innerHTML = `
+      ${pageHead("Quản trị hệ thống", "Quản lý tài khoản, danh mục đào tạo và khám phá dữ liệu của 22 bảng BTL1.", `<a href="#/dashboard">Trang chủ</a><span>›</span><span>Quản trị</span>`)}
+      <div class="admin-tabs" role="tablist">${ADMIN_TABS.map((item) => `<a role="tab" href="#/admin?tab=${item.id}" class="${item.id === tab ? "active" : ""}">${escapeHtml(item.label)}</a>`).join("")}</div>
+      <div id="adminContent">${loadingState()}</div>`;
+    await loadAdminTab(tab);
+  }
+
+  async function loadAdminReferences() {
+    if (state.adminCache.references) return state.adminCache.references;
+    const results = await Promise.allSettled([
+      api("/api/admin/users"),
+      api("/api/admin/faculties"),
+      api("/api/admin/semesters"),
+      api("/api/admin/courses"),
+      api("/api/admin/components"),
+    ]);
+    const value = (index) => (results[index].status === "fulfilled" ? results[index].value.data || [] : []);
+    state.adminCache.references = {
+      users: value(0),
+      faculties: value(1),
+      semesters: value(2),
+      courses: value(3),
+      components: value(4),
+    };
+    return state.adminCache.references;
   }
 
   async function loadAdminTab(tab) {
-    const content = $("#adminTabContent");
-    content.innerHTML = '<div class="panel"><div class="panel-body">Đang tải…</div></div>';
+    const content = $("#adminContent");
+    if (!content) return;
+    content.innerHTML = loadingState();
     try {
+      const refs = await loadAdminReferences();
       if (tab === "users") {
-        const users = (await api("/api/admin/users")).data || [];
-        content.innerHTML = `<div class="panel"><div class="table-responsive"><table class="table"><thead><tr><th>ID</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th class="text-end">Khóa/Mở</th></tr></thead>
-          <tbody>${users.map((u) => `<tr><td>${escapeHtml(u.UserID)}</td><td>${escapeHtml(u.FullName)}</td><td>${escapeHtml(u.Email)}</td><td>${escapeHtml(u.Role)}</td><td>${statusBadge(u.AccountStatus)}</td>
-          <td class="text-end"><button class="btn btn-sm ${u.AccountStatus === "ACTIVE" ? "btn-outline-danger" : "btn-outline-success"}" data-toggle-status="${escapeHtml(u.UserID)}" data-status="${u.AccountStatus === "ACTIVE" ? "LOCKED" : "ACTIVE"}">${u.AccountStatus === "ACTIVE" ? "Khóa" : "Mở khóa"}</button></td></tr>`).join("")}</tbody></table></div></div>`;
-        content.querySelectorAll("[data-toggle-status]").forEach((btn) => btn.addEventListener("click", async () => {
-          try { await api(`/api/admin/users/${btn.dataset.toggleStatus}/status`, { method: "PATCH", body: { status: btn.dataset.status } }); notify("Đã cập nhật trạng thái."); loadAdminTab("users"); } catch (e) { notify(e.message, "danger"); }
-        }));
+        renderAdminUsers(content, refs);
       } else if (tab === "faculties") {
-        const rows = (await api("/api/admin/faculties")).data || [];
-        content.innerHTML = genericTable(["FacultyID", "FacultyName", "FacultyNameEN"], rows);
+        renderAdminFaculties(content, refs);
       } else if (tab === "semesters") {
-        const rows = (await api("/api/admin/semesters")).data || [];
-        content.innerHTML = genericTable(["SemesterID", "AcademicYear", "TermNo", "StartDate", "EndDate"], rows);
+        renderAdminSemesters(content, refs);
       } else if (tab === "courses") {
-        const rows = (await api("/api/admin/courses")).data || [];
-        content.innerHTML = genericTable(["CourseID", "CourseCode", "CourseName", "Credits", "FacultyName"], rows);
+        renderAdminCourses(content, refs);
       } else if (tab === "components") {
-        const rows = (await api("/api/admin/components")).data || [];
-        content.innerHTML = genericTable(["ComponentID", "CourseCode", "ComponentType", "ComponentName"], rows);
+        renderAdminComponents(content, refs);
       } else if (tab === "sections") {
-        const rows = (await api("/api/admin/sections")).data || [];
-        content.innerHTML = genericTable(["SectionID", "SectionCode", "CourseCode", "ComponentType", "AcademicYear", "TermNo", "InstructorName", "Capacity", "SectionStatus"], rows);
+        renderAdminSections(content, refs);
       } else if (tab === "data") {
-        const tables = (await api("/api/admin/data/tables")).data || [];
-        const options = tables.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
-        content.innerHTML = `<div class="panel"><div class="panel-body">
-          <label class="form-label">Chọn bảng</label>
-          <select class="form-select" id="exploreTable">${options}</select>
-          <div class="mt-3" id="exploreResult"><span class="cell-muted">Chọn bảng để xem dữ liệu.</span></div></div></div>`;
-        $("#exploreTable").addEventListener("change", async () => {
-          const table = $("#exploreTable").value;
-          const rows = (await api(`/api/admin/data/${table}?limit=50`)).data || [];
-          $("#exploreResult").innerHTML = genericTable(Object.keys(rows[0] || {}), rows);
-        });
+        renderAdminData(content);
       }
     } catch (error) {
-      content.innerHTML = `<div class="empty-state"><strong>Lỗi</strong><span>${escapeHtml(error.message)}</span></div>`;
+      content.innerHTML = errorState(error.message);
+    }
+  }
+
+  function adminToolbar(title, note, addLabel, addId) {
+    return `<div class="toolbar"><div><strong>${escapeHtml(title)}</strong> <span class="cell-muted">${escapeHtml(note)}</span></div>
+      ${addLabel ? `<button type="button" class="btn btn-pink btn-sm" id="${addId}">${icon("plus")} ${escapeHtml(addLabel)}</button>` : ""}</div>`;
+  }
+
+  function refreshAdmin(tab) {
+    state.adminCache.references = null;
+    if (tab === "sections" || tab === "data") state.adminCache.sections = null;
+    return loadAdminTab(tab);
+  }
+
+  /* -------- users ---------------------------------------------------- */
+  function renderAdminUsers(content, refs) {
+    const users = refs.users;
+    content.innerHTML = `
+      ${adminToolbar("Tài khoản", `${formatNumber(users.length)} tài khoản`, "Thêm tài khoản", "addUserBtn")}
+      <div class="panel"><div class="table-responsive"><table class="table">
+        <thead><tr><th>ID</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>${users.map((user) => `<tr>
+          <td class="mono">${escapeHtml(user.UserID)}</td>
+          <td class="cell-primary">${escapeHtml(user.FullName)}</td>
+          <td class="cell-muted">${escapeHtml(user.Email)}</td>
+          <td>${escapeHtml(ROLE_LABELS[user.Role] || user.Role)}</td>
+          <td>${statusBadge(user.AccountStatus)}</td>
+          <td class="text-end text-nowrap">
+            <button class="btn btn-light btn-sm" data-user-status="${escapeHtml(user.UserID)}" data-next="${user.AccountStatus === "ACTIVE" ? "LOCKED" : "ACTIVE"}">${user.AccountStatus === "ACTIVE" ? "Khóa" : "Mở khóa"}</button>
+          </td>
+        </tr>`).join("")}</tbody>
+      </table></div></div>`;
+    $("#addUserBtn").addEventListener("click", () => openUserModal(refs));
+    content.querySelectorAll("[data-user-status]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const next = button.dataset.next;
+        confirmAction(`Đổi trạng thái tài khoản sang <strong>${next}</strong>?`, async () => {
+          try {
+            await api(`/api/admin/users/${button.dataset.userStatus}/status`, { method: "PATCH", body: { status: next } });
+            notify("Đã cập nhật trạng thái tài khoản.", "success");
+            await refreshAdmin("users");
+          } catch (error) {
+            notify(error.message, "danger");
+          }
+        }, { danger: next === "LOCKED", label: next === "LOCKED" ? "Khóa" : "Mở khóa" });
+      });
+    });
+  }
+
+  function openUserModal(refs) {
+    const facultyOptions = refs.faculties.map((row) => ({ value: row.FacultyID, label: row.FacultyName }));
+    openModal({
+      title: "Thêm tài khoản",
+      body: `<div class="field-grid">
+        ${field({ id: "userFullName", label: "Họ và tên", required: true, span: true })}
+        ${field({ id: "userEmail", label: "Email", type: "email", required: true, span: true })}
+        ${field({ id: "userRole", label: "Vai trò", type: "select", options: [
+          { value: "STUDENT", label: "Sinh viên" },
+          { value: "STAFF", label: "Cán bộ" },
+          { value: "ADMIN", label: "Quản trị viên" },
+        ] })}
+        ${field({ id: "userStudentCode", label: "Mã số sinh viên", placeholder: "VD: 2210999" })}
+        ${field({ id: "userFaculty", label: "Khoa (cho sinh viên)", type: "select", options: facultyOptions, span: true })}
+      </div>`,
+      footer: modalFooter("saveUser", "Tạo tài khoản"),
+    });
+    $("#saveUser").addEventListener("click", async () => {
+      const role = $("#userRole").value;
+      const body = {
+        full_name: $("#userFullName").value.trim(),
+        email: $("#userEmail").value.trim(),
+        role,
+      };
+      if (role === "STUDENT" || role === "STAFF") {
+        body.faculty_id = Number($("#userFaculty").value) || 0;
+        if (!body.faculty_id) {
+          notify("Chọn khoa cho tài khoản.", "warning");
+          return;
+        }
+      }
+      if (role === "STUDENT") {
+        body.student_code = $("#userStudentCode").value.trim();
+        if (!body.student_code) {
+          notify("Nhập mã số sinh viên.", "warning");
+          return;
+        }
+      }
+      const restore = setBusy($("#saveUser"), "Đang tạo…");
+      try {
+        await api("/api/admin/users", { method: "POST", body });
+        notify("Đã tạo tài khoản.", "success");
+        closeModal();
+        await refreshAdmin("users");
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  /* -------- faculties ------------------------------------------------ */
+  function renderAdminFaculties(content, refs) {
+    const rows = refs.faculties;
+    content.innerHTML = `
+      ${adminToolbar("Khoa", `${formatNumber(rows.length)} khoa`, "Thêm khoa", "addFacultyBtn")}
+      <div class="panel"><div class="table-responsive"><table class="table">
+        <thead><tr><th>ID</th><th>Tên khoa</th><th>Tên tiếng Anh</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr><td class="mono">${escapeHtml(row.FacultyID)}</td><td class="cell-primary">${escapeHtml(row.FacultyName)}</td><td class="cell-muted">${escapeHtml(row.FacultyNameEN || "")}</td>
+          <td class="text-end text-nowrap"><button class="btn btn-light btn-sm" data-edit-faculty="${escapeHtml(row.FacultyID)}">Sửa</button> <button class="btn btn-light btn-sm" data-del-faculty="${escapeHtml(row.FacultyID)}">Xóa</button></td></tr>`).join("")}</tbody>
+      </table></div></div>`;
+    $("#addFacultyBtn").addEventListener("click", () => openFacultyModal());
+    content.querySelectorAll("[data-edit-faculty]").forEach((button) => {
+      const row = rows.find((item) => Number(item.FacultyID) === Number(button.dataset.editFaculty));
+      button.addEventListener("click", () => openFacultyModal(row));
+    });
+    content.querySelectorAll("[data-del-faculty]").forEach((button) => {
+      button.addEventListener("click", () => deleteAdminRow("faculties", button.dataset.delFaculty, "khoa"));
+    });
+  }
+
+  function openFacultyModal(row = null) {
+    openModal({
+      title: row ? "Sửa khoa" : "Thêm khoa",
+      body: `<div class="field-grid">
+        ${field({ id: "facultyName", label: "Tên khoa", value: row?.FacultyName || "", required: true, span: true })}
+        ${field({ id: "facultyNameEn", label: "Tên tiếng Anh", value: row?.FacultyNameEN || "", span: true })}
+      </div>`,
+      footer: modalFooter("saveFaculty"),
+    });
+    $("#saveFaculty").addEventListener("click", async () => {
+      const body = { name: $("#facultyName").value.trim(), name_en: $("#facultyNameEn").value.trim() || null };
+      const restore = setBusy($("#saveFaculty"), "Đang lưu…");
+      try {
+        if (row) await api(`/api/admin/faculties/${row.FacultyID}`, { method: "PUT", body });
+        else await api("/api/admin/faculties", { method: "POST", body });
+        notify("Đã lưu khoa.", "success");
+        closeModal();
+        await refreshAdmin("faculties");
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  /* -------- semesters ------------------------------------------------ */
+  function renderAdminSemesters(content, refs) {
+    const rows = refs.semesters;
+    content.innerHTML = `
+      ${adminToolbar("Học kỳ", `${formatNumber(rows.length)} học kỳ`, "Thêm học kỳ", "addSemesterBtn")}
+      <div class="panel"><div class="table-responsive"><table class="table">
+        <thead><tr><th>ID</th><th>Năm học</th><th>Kỳ</th><th>Bắt đầu</th><th>Kết thúc</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr><td class="mono">${escapeHtml(row.SemesterID)}</td><td class="cell-primary">${escapeHtml(row.AcademicYear)}</td><td>${escapeHtml(row.TermNo)}</td><td class="cell-muted">${escapeHtml(formatDate(row.StartDate))}</td><td class="cell-muted">${escapeHtml(formatDate(row.EndDate))}</td>
+          <td class="text-end text-nowrap"><button class="btn btn-light btn-sm" data-edit-semester="${escapeHtml(row.SemesterID)}">Sửa</button> <button class="btn btn-light btn-sm" data-del-semester="${escapeHtml(row.SemesterID)}">Xóa</button></td></tr>`).join("")}</tbody>
+      </table></div></div>`;
+    $("#addSemesterBtn").addEventListener("click", () => openSemesterModal());
+    content.querySelectorAll("[data-edit-semester]").forEach((button) => {
+      const row = rows.find((item) => Number(item.SemesterID) === Number(button.dataset.editSemester));
+      button.addEventListener("click", () => openSemesterModal(row));
+    });
+    content.querySelectorAll("[data-del-semester]").forEach((button) => {
+      button.addEventListener("click", () => deleteAdminRow("semesters", button.dataset.delSemester, "học kỳ"));
+    });
+  }
+
+  function openSemesterModal(row = null) {
+    openModal({
+      title: row ? "Sửa học kỳ" : "Thêm học kỳ",
+      body: `<div class="field-grid">
+        ${field({ id: "semYear", label: "Năm học", value: row?.AcademicYear || "2026-2027", placeholder: "2026-2027", required: true })}
+        ${field({ id: "semTerm", label: "Kỳ", type: "number", value: row?.TermNo || 1, required: true })}
+        ${field({ id: "semStart", label: "Ngày bắt đầu", type: "date", value: row ? String(row.StartDate).slice(0, 10) : "", required: true })}
+        ${field({ id: "semEnd", label: "Ngày kết thúc", type: "date", value: row ? String(row.EndDate).slice(0, 10) : "", required: true })}
+      </div>`,
+      footer: modalFooter("saveSemester"),
+    });
+    $("#saveSemester").addEventListener("click", async () => {
+      const body = {
+        academic_year: $("#semYear").value.trim(),
+        term_no: Number($("#semTerm").value) || 1,
+        start_date: $("#semStart").value,
+        end_date: $("#semEnd").value,
+      };
+      const restore = setBusy($("#saveSemester"), "Đang lưu…");
+      try {
+        if (row) await api(`/api/admin/semesters/${row.SemesterID}`, { method: "PUT", body });
+        else await api("/api/admin/semesters", { method: "POST", body });
+        notify("Đã lưu học kỳ.", "success");
+        closeModal();
+        await refreshAdmin("semesters");
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  /* -------- courses -------------------------------------------------- */
+  function renderAdminCourses(content, refs) {
+    const rows = refs.courses;
+    content.innerHTML = `
+      ${adminToolbar("Môn học", `${formatNumber(rows.length)} môn`, "Thêm môn học", "addCourseBtn")}
+      <div class="panel"><div class="table-responsive"><table class="table">
+        <thead><tr><th>ID</th><th>Mã môn</th><th>Tên môn</th><th>Tín chỉ</th><th>Khoa</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr><td class="mono">${escapeHtml(row.CourseID)}</td><td class="cell-primary">${escapeHtml(row.CourseCode)}</td><td>${escapeHtml(row.CourseName)}</td><td>${escapeHtml(row.Credits)}</td><td class="cell-muted">${escapeHtml(row.FacultyName || "")}</td>
+          <td class="text-end text-nowrap"><button class="btn btn-light btn-sm" data-edit-course="${escapeHtml(row.CourseID)}">Sửa</button> <button class="btn btn-light btn-sm" data-del-course="${escapeHtml(row.CourseID)}">Xóa</button></td></tr>`).join("")}</tbody>
+      </table></div></div>`;
+    $("#addCourseBtn").addEventListener("click", () => openCourseModal(refs));
+    content.querySelectorAll("[data-edit-course]").forEach((button) => {
+      const row = rows.find((item) => Number(item.CourseID) === Number(button.dataset.editCourse));
+      button.addEventListener("click", () => openCourseModal(refs, row));
+    });
+    content.querySelectorAll("[data-del-course]").forEach((button) => {
+      button.addEventListener("click", () => deleteAdminRow("courses", button.dataset.delCourse, "môn học"));
+    });
+  }
+
+  function openCourseModal(refs, row = null) {
+    const options = refs.faculties.map((faculty) => ({ value: faculty.FacultyID, label: faculty.FacultyName }));
+    openModal({
+      title: row ? "Sửa môn học" : "Thêm môn học",
+      body: `<div class="field-grid">
+        ${field({ id: "courseCode", label: "Mã môn", value: row?.CourseCode || "", required: true })}
+        ${field({ id: "courseCredits", label: "Số tín chỉ", type: "number", value: row?.Credits || 3, required: true })}
+        ${field({ id: "courseName", label: "Tên môn", value: row?.CourseName || "", required: true, span: true })}
+        ${field({ id: "courseFaculty", label: "Khoa", type: "select", value: row?.FacultyID || refs.faculties[0]?.FacultyID, options, span: true })}
+      </div>`,
+      footer: modalFooter("saveCourse"),
+    });
+    $("#saveCourse").addEventListener("click", async () => {
+      const body = {
+        course_code: $("#courseCode").value.trim(),
+        course_name: $("#courseName").value.trim(),
+        credits: Number($("#courseCredits").value) || 3,
+        faculty_id: Number($("#courseFaculty").value),
+      };
+      const restore = setBusy($("#saveCourse"), "Đang lưu…");
+      try {
+        if (row) await api(`/api/admin/courses/${row.CourseID}`, { method: "PUT", body });
+        else await api("/api/admin/courses", { method: "POST", body });
+        notify("Đã lưu môn học.", "success");
+        closeModal();
+        await refreshAdmin("courses");
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  /* -------- components ----------------------------------------------- */
+  function renderAdminComponents(content, refs) {
+    const rows = refs.components;
+    content.innerHTML = `
+      ${adminToolbar("Thành phần môn học", `${formatNumber(rows.length)} thành phần`, "Thêm thành phần", "addComponentBtn")}
+      <div class="panel"><div class="table-responsive"><table class="table">
+        <thead><tr><th>ID</th><th>Môn</th><th>Loại</th><th>Tên thành phần</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr><td class="mono">${escapeHtml(row.ComponentID)}</td><td class="cell-primary">${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}</td><td>${escapeHtml(row.ComponentType)}</td><td>${escapeHtml(row.ComponentName)}</td>
+          <td class="text-end text-nowrap"><button class="btn btn-light btn-sm" data-edit-component="${escapeHtml(row.ComponentID)}">Sửa</button> <button class="btn btn-light btn-sm" data-del-component="${escapeHtml(row.ComponentID)}">Xóa</button></td></tr>`).join("")}</tbody>
+      </table></div></div>`;
+    $("#addComponentBtn").addEventListener("click", () => openComponentModal(refs));
+    content.querySelectorAll("[data-edit-component]").forEach((button) => {
+      const row = rows.find((item) => Number(item.ComponentID) === Number(button.dataset.editComponent));
+      button.addEventListener("click", () => openComponentModal(refs, row));
+    });
+    content.querySelectorAll("[data-del-component]").forEach((button) => {
+      button.addEventListener("click", () => deleteAdminRow("components", button.dataset.delComponent, "thành phần"));
+    });
+  }
+
+  function openComponentModal(refs, row = null) {
+    const options = refs.courses.map((course) => ({ value: course.CourseID, label: `${course.CourseCode} — ${course.CourseName}` }));
+    openModal({
+      title: row ? "Sửa thành phần" : "Thêm thành phần",
+      body: `<div class="field-grid">
+        ${field({ id: "componentCourse", label: "Môn học", type: "select", value: row?.CourseID || refs.courses[0]?.CourseID, options, span: true })}
+        ${field({ id: "componentType", label: "Loại", type: "select", value: row?.ComponentType || "THEORY", options: [
+          { value: "THEORY", label: "Lý thuyết" }, { value: "PRACTICE", label: "Thực hành" },
+        ] })}
+        ${field({ id: "componentName", label: "Tên thành phần", value: row?.ComponentName || "", required: true })}
+      </div>`,
+      footer: modalFooter("saveComponent"),
+    });
+    $("#saveComponent").addEventListener("click", async () => {
+      const body = {
+        course_id: Number($("#componentCourse").value),
+        component_type: $("#componentType").value,
+        component_name: $("#componentName").value.trim(),
+      };
+      const restore = setBusy($("#saveComponent"), "Đang lưu…");
+      try {
+        if (row) await api(`/api/admin/components/${row.ComponentID}`, { method: "PUT", body });
+        else await api("/api/admin/components", { method: "POST", body });
+        notify("Đã lưu thành phần.", "success");
+        closeModal();
+        await refreshAdmin("components");
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  /* -------- sections ------------------------------------------------- */
+  function renderAdminSections(content, refs) {
+    const rows = state.adminCache.sections || [];
+    if (!state.adminCache.sections) {
+      api("/api/admin/sections").then((payload) => {
+        state.adminCache.sections = payload.data || [];
+        renderAdminSections(content, refs);
+      }).catch((error) => {
+        content.innerHTML = errorState(error.message);
+      });
+      return;
+    }
+    content.innerHTML = `
+      ${adminToolbar("Lớp học phần", `${formatNumber(rows.length)} lớp`, "Thêm lớp", "addSectionBtn")}
+      <div class="panel"><div class="table-responsive"><table class="table">
+        <thead><tr><th>ID</th><th>Mã lớp</th><th>Môn</th><th>Học kỳ</th><th>Giảng viên</th><th>Lịch</th><th>Sĩ số</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr>
+          <td class="mono">${escapeHtml(row.SectionID)}</td>
+          <td class="cell-primary">${escapeHtml(row.SectionCode)}</td>
+          <td>${escapeHtml(row.CourseCode)} · ${escapeHtml(row.CourseName)}<div class="cell-muted">${escapeHtml(row.ComponentType)}</div></td>
+          <td class="cell-muted">${escapeHtml(semesterLabel(row))}</td>
+          <td>${escapeHtml(row.InstructorName || "—")}</td>
+          <td class="cell-muted">${escapeHtml(dayName(row.DayOfWeek))} ${formatTime(row.StartTime)}–${formatTime(row.EndTime)}<div>${escapeHtml(row.RoomCode || "")}</div></td>
+          <td class="mono">${formatNumber(row.EnrolledCount ?? row.Capacity)}</td>
+          <td>${statusBadge(row.SectionStatus)}</td>
+          <td class="text-end text-nowrap"><button class="btn btn-light btn-sm" data-edit-section="${escapeHtml(row.SectionID)}">Sửa</button> <button class="btn btn-light btn-sm" data-del-section="${escapeHtml(row.SectionID)}">Xóa</button></td>
+        </tr>`).join("")}</tbody>
+      </table></div></div>`;
+    $("#addSectionBtn").addEventListener("click", () => openSectionModal(refs));
+    content.querySelectorAll("[data-edit-section]").forEach((button) => {
+      const row = rows.find((item) => Number(item.SectionID) === Number(button.dataset.editSection));
+      button.addEventListener("click", () => openSectionModal(refs, row));
+    });
+    content.querySelectorAll("[data-del-section]").forEach((button) => {
+      button.addEventListener("click", () => deleteAdminRow("sections", button.dataset.delSection, "lớp học phần"));
+    });
+  }
+
+  function openSectionModal(refs, row = null) {
+    const componentOptions = refs.components.map((component) => ({
+      value: component.ComponentID,
+      label: `${component.CourseCode} · ${component.ComponentType} — ${component.ComponentName}`,
+    }));
+    const semesterOptions = refs.semesters.map((semester) => ({ value: semester.SemesterID, label: semesterLabel(semester) }));
+    const staffOptions = [{ value: "", label: "Chưa phân công" }].concat(
+      refs.users.filter((user) => user.Role === "STAFF").map((user) => ({ value: user.UserID, label: user.FullName })),
+    );
+    openModal({
+      title: row ? "Sửa lớp học phần" : "Thêm lớp học phần",
+      size: "lg",
+      body: `<div class="field-grid">
+        ${field({ id: "sectionComponent", label: "Thành phần môn", type: "select", value: row?.ComponentID || refs.components[0]?.ComponentID, options: componentOptions, span: true })}
+        ${field({ id: "sectionSemester", label: "Học kỳ", type: "select", value: row?.SemesterID || refs.semesters[0]?.SemesterID, options: semesterOptions })}
+        ${field({ id: "sectionCode", label: "Mã lớp", value: row?.SectionCode || "", placeholder: "VD: CC01", required: true })}
+        ${field({ id: "sectionInstructor", label: "Giảng viên", type: "select", value: row?.PrimaryInstructorID || "", options: staffOptions, span: true })}
+        ${field({ id: "sectionCapacity", label: "Sĩ số tối đa", type: "number", value: row?.Capacity || 40, required: true })}
+        ${field({ id: "sectionStatus", label: "Trạng thái", type: "select", value: row?.SectionStatus || "OPEN", options: [
+          { value: "OPEN", label: "OPEN" }, { value: "CLOSED", label: "CLOSED" }, { value: "CANCELLED", label: "CANCELLED" },
+        ] })}
+        ${field({ id: "sectionDay", label: "Thứ", type: "select", value: row?.DayOfWeek || 1, options: [
+          { value: 1, label: "Thứ 2" }, { value: 2, label: "Thứ 3" }, { value: 3, label: "Thứ 4" }, { value: 4, label: "Thứ 5" },
+          { value: 5, label: "Thứ 6" }, { value: 6, label: "Thứ 7" }, { value: 7, label: "Chủ nhật" },
+        ] })}
+        ${field({ id: "sectionRoom", label: "Phòng", value: row?.RoomCode || "A101", required: true })}
+        ${field({ id: "sectionStart", label: "Bắt đầu", type: "time", value: row ? String(row.StartTime).slice(0, 5) : "07:00", required: true })}
+        ${field({ id: "sectionEnd", label: "Kết thúc", type: "time", value: row ? String(row.EndTime).slice(0, 5) : "09:00", required: true })}
+      </div>`,
+      footer: modalFooter("saveSection"),
+    });
+    $("#saveSection").addEventListener("click", async () => {
+      const body = {
+        component_id: Number($("#sectionComponent").value),
+        semester_id: Number($("#sectionSemester").value),
+        instructor_id: Number($("#sectionInstructor").value) || null,
+        section_code: $("#sectionCode").value.trim(),
+        capacity: Number($("#sectionCapacity").value) || 40,
+        status: $("#sectionStatus").value,
+        day_of_week: Number($("#sectionDay").value),
+        start_time: $("#sectionStart").value,
+        end_time: $("#sectionEnd").value,
+        room_code: $("#sectionRoom").value.trim(),
+      };
+      const restore = setBusy($("#saveSection"), "Đang lưu…");
+      try {
+        if (row) await api(`/api/admin/sections/${row.SectionID}`, { method: "PUT", body });
+        else await api("/api/admin/sections", { method: "POST", body });
+        notify("Đã lưu lớp học phần.", "success");
+        state.adminCache.sections = null;
+        closeModal();
+        await refreshAdmin("sections");
+      } catch (error) {
+        notify(error.message, "danger");
+        restore();
+      }
+    });
+  }
+
+  /* -------- data explorer -------------------------------------------- */
+  async function renderAdminData(content) {
+    content.innerHTML = loadingState("Đang tải danh sách bảng…");
+    try {
+      const tables = (await api("/api/admin/data/tables")).data || [];
+      content.innerHTML = `
+        <div class="toolbar"><div><strong>Khám phá dữ liệu</strong> <span class="cell-muted">${formatNumber(tables.length)} bảng BTL1</span></div></div>
+        <div class="panel mb-3"><div class="panel-body tight">
+          <label class="form-label" for="exploreTable">Chọn bảng</label>
+          <select class="form-select" id="exploreTable">${tables.map((table) => `<option value="${escapeHtml(table)}">${escapeHtml(table)}</option>`).join("")}</select>
+        </div></div>
+        <div id="exploreResult"></div>`;
+      const load = async () => {
+        const table = $("#exploreTable").value;
+        const target = $("#exploreResult");
+        target.innerHTML = loadingState();
+        try {
+          const rows = (await api(`/api/admin/data/${table}?limit=100`)).data || [];
+          target.innerHTML = genericTable(Object.keys(rows[0] || {}), rows);
+        } catch (error) {
+          target.innerHTML = errorState(error.message);
+        }
+      };
+      $("#exploreTable").addEventListener("change", load);
+      await load();
+    } catch (error) {
+      content.innerHTML = errorState(error.message);
     }
   }
 
   function genericTable(columns, rows) {
-    if (!columns.length) return '<div class="cell-muted">Không có dữ liệu.</div>';
-    const head = columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("");
-    const body = rows.map((r) => `<tr>${columns.map((c) => `<td>${escapeHtml(r[c] ?? "")}</td>`).join("")}</tr>`).join("");
-    return `<div class="panel"><div class="table-responsive"><table class="table"><thead><tr>${head}</tr></thead><tbody>${body || '<tr><td class="cell-muted">Không có.</td></tr>'}</tbody></table></div></div>`;
+    if (!columns.length) return emptyState("Bảng không có dữ liệu", "Bảng này hiện chưa có bản ghi nào.");
+    const head = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
+    const body = rows.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(row[column] ?? "")}</td>`).join("")}</tr>`).join("");
+    return `<div class="panel"><div class="table-responsive"><table class="table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
   }
 
+  function deleteAdminRow(resource, id, label) {
+    confirmAction(`Xóa ${escapeHtml(label)} này? Thao tác có thể bị từ chối nếu đang được tham chiếu bởi dữ liệu khác.`, async () => {
+      try {
+        await api(`/api/admin/${resource}/${id}`, { method: "DELETE" });
+        notify(`Đã xóa ${label}.`, "success");
+        state.adminCache.sections = null;
+        await refreshAdmin(state.adminTab);
+      } catch (error) {
+        notify(error.message, "danger");
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Bootstrap                                                           */
+  /* ------------------------------------------------------------------ */
   async function init() {
-    attachEvents();
+    hydrateIcons(document);
+    bindLogin();
+    bindAccountMenu();
+    window.addEventListener("hashchange", () => {
+      if (state.role) render();
+    });
     const loggedIn = await checkAuth();
     if (!loggedIn) return;
-    await loadCatalog();
-    await Promise.allSettled([
-      loadDashboard(),
-      loadHealth(),
-      loadEnrollments(),
-      loadStatistics(),
-    ]);
-    window.setInterval(() => loadHealth(false), 60_000);
+    await render();
   }
 
   document.addEventListener("DOMContentLoaded", init);

@@ -78,8 +78,26 @@ class FakeHealthService:
 
 
 class FakeStudentService:
+    def profile(self, student_id):
+        return {"UserID": student_id, "FullName": "Nguyen Van An", "StudentCode": "2210001"}
+
     def sections(self, student_id):
         return [{"SectionID": 1, "student_id": student_id}]
+
+    def catalog(self, student_id):
+        return [{"SectionID": 2, "student_id": student_id, "EnrollmentStatus": None}]
+
+    def enroll(self, student_id, section_id):
+        return {"success": 1, "student_id": student_id, "section_id": section_id}
+
+    def drop_enrollment(self, student_id, enrollment_id):
+        return {"success": 1, "enrollment_id": enrollment_id, "student_id": student_id}
+
+    def files(self, student_id, submission_id):
+        return [{"SubmissionID": submission_id, "FileName": "bai-nop.pdf"}]
+
+    def finish_quiz(self, student_id, attempt_id, score):
+        return {"attempt_id": attempt_id, "score": score}
 
     def grades(self, student_id):
         return [{"GradeID": 1, "student_id": student_id}]

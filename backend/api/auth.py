@@ -70,7 +70,7 @@ def auth_login():
         return jsonify({"error": {"code": "validation_error", "message": "Role khong hop le."}}), 400
     
     row = db.fetch_one("""
-        SELECT u.UserID, u.FullName, u.Email, u.AvatarURL, u.AccountStatus
+        SELECT u.UserID, u.FullName, u.Email, u.AvatarURL, u.AccountStatus, u.LastAccessAt
         FROM UserAccount u WHERE u.UserID = %s
     """, (user_id,))
 
@@ -115,7 +115,7 @@ def auth_me():
     
     db = get_db()
     row = db.fetch_one("""
-        SELECT u.UserID, u.FullName, u.Email, u.AvatarURL, u.AccountStatus
+        SELECT u.UserID, u.FullName, u.Email, u.AvatarURL, u.AccountStatus, u.LastAccessAt
         FROM UserAccount u WHERE u.UserID = %s
     """, (session["user_id"],))
     

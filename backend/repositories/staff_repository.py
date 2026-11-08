@@ -213,7 +213,7 @@ class StaffRepository:
             SELECT g.`GradeID`, g.`EnrollmentID`, g.`AssessmentID`, g.`GradedByStaffID`,
                    g.`Score`, g.`GradedAt`, g.`IsPublished`,
                    a.`Title` AS AssessmentTitle, a.`MaxScore`,
-                   u.`FullName` AS StudentName, s.`StudentCode`
+                   u.`FullName` AS StudentName, st.`StudentCode`
             FROM `Grade` g
             JOIN `Assessment` a ON a.`AssessmentID` = g.`AssessmentID`
             JOIN `Enrollment` e ON e.`EnrollmentID` = g.`EnrollmentID`

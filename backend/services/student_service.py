@@ -8,8 +8,26 @@ class StudentService:
     def __init__(self, repository: StudentRepository) -> None:
         self.repository = repository
 
+    def profile(self, student_id: int) -> dict:
+        row = self.repository.profile(student_id)
+        if row is None:
+            raise NotFoundError("Khong tim thay ho so sinh vien.")
+        return row
+
     def sections(self, student_id: int) -> list[dict]:
         return self.repository.sections(student_id)
+
+    def catalog(self, student_id: int) -> list[dict]:
+        return self.repository.catalog_sections(student_id)
+
+    def enroll(self, student_id: int, section_id: int) -> dict:
+        return self.repository.enroll(student_id, section_id)
+
+    def drop_enrollment(self, student_id: int, enrollment_id: int) -> dict:
+        row = self.repository.enrollment_detail(enrollment_id, student_id)
+        if row is None:
+            raise AppError("Khong tim thay ghi danh cua ban.", 404, "not_found")
+        return self.repository.drop_enrollment(enrollment_id, row["SectionID"])
 
     def section(self, student_id: int, section_id: int) -> dict:
         row = self.repository.section_accessible(student_id, section_id)
@@ -36,6 +54,8 @@ class StudentService:
         self.section(student_id, row["SectionID"])
         row["attachments"] = self.repository.attachments(assessment_id)
         row["submissions"] = self.repository.submissions(assessment_id, student_id)
+        for submission in row["submissions"]:
+            submission["files"] = self.repository.submission_files(submission["SubmissionID"])
         return row
 
     def quiz(self, student_id: int, assessment_id: int) -> dict:
@@ -56,6 +76,8 @@ class StudentService:
         self.section(student_id, detail["SectionID"])
 
         attempt_no = self.repository.next_attempt_no(assessment_id, student_id)
+        if attempt_no > int(detail.get("MaxAttempts") or 1):
+            raise AppError("Da dat so lan nop toi da.", 409, "conflict")
         submission_id = self.repository.create_submission(
             assessment_id, student_id, attempt_no, "SUBMITTED"
         )
@@ -69,8 +91,21 @@ class StudentService:
             raise NotFoundError("Khong tim thay quiz.")
         self.section(student_id, detail["SectionID"])
         attempt_no = self.repository.next_quiz_attempt_no(assessment_id, student_id)
+        if attempt_no > int(detail.get("MaxAttempts") or 1):
+            raise AppError("Da dat so luot lam bai toi da.", 409, "conflict")
         attempt_id = self.repository.create_quiz_attempt(assessment_id, student_id, attempt_no)
         return {"attempt_id": attempt_id, "attempt_no": attempt_no}
+
+    def files(self, student_id: int, submission_id: int) -> list[dict]:
+        if not self.repository.submission_owner(submission_id, student_id):
+            raise AppError("Khong co quyen xem tep dinh kem.", 403, "forbidden")
+        return self.repository.submission_files(submission_id)
+
+    def finish_quiz(self, student_id: int, attempt_id: int, score: float) -> dict:
+        affected = self.repository.finish_quiz_attempt(attempt_id, student_id, score)
+        if not affected:
+            raise NotFoundError("Khong tim thay luot lam bai cua ban.")
+        return {"attempt_id": attempt_id, "score": score}
 
     def feedback(self, student_id: int, submission_id: int, content: str, parent_id: int | None) -> dict:
         if not self.repository.submission_owner(submission_id, student_id):

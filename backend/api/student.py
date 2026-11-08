@@ -4,9 +4,46 @@ from flask import Blueprint, jsonify, request
 
 from backend.api.dependencies import service
 from backend.auth_guard import current_user_id, require_role
+from backend.errors import ValidationError
 from backend.validation import parse_optional_int, require_json_object
 
 bp = Blueprint("student", __name__, url_prefix="/api/student")
+
+
+def _float(body: dict, key: str) -> float:
+    value = body.get(key)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        raise ValidationError(f"{key} phai la so.", {key: "invalid"})
+
+
+@bp.get("/profile")
+@require_role("STUDENT")
+def profile():
+    return jsonify({"data": service("student").profile(current_user_id())})
+
+
+@bp.get("/catalog-sections")
+@require_role("STUDENT")
+def catalog_sections():
+    return jsonify({"data": service("student").catalog(current_user_id())})
+
+
+@bp.post("/enrollments")
+@require_role("STUDENT")
+def enroll():
+    body = require_json_object()
+    section_id = parse_optional_int(body.get("section_id"), "section_id", min_value=1)
+    if not section_id:
+        raise ValidationError("Thieu section_id.", {"section_id": "required"})
+    return jsonify({"data": service("student").enroll(current_user_id(), section_id)}), 201
+
+
+@bp.patch("/enrollments/<int:enrollment_id>/drop")
+@require_role("STUDENT")
+def drop_enrollment(enrollment_id: int):
+    return jsonify({"data": service("student").drop_enrollment(current_user_id(), enrollment_id)})
 
 
 @bp.get("/sections")
@@ -71,6 +108,19 @@ def start_quiz(assessment_id: int):
         jsonify({"data": service("student").start_quiz(current_user_id(), assessment_id)}),
         201,
     )
+
+
+@bp.patch("/quiz-attempts/<int:attempt_id>/finish")
+@require_role("STUDENT")
+def finish_quiz(attempt_id: int):
+    body = require_json_object()
+    return jsonify({"data": service("student").finish_quiz(current_user_id(), attempt_id, _float(body, "score"))})
+
+
+@bp.get("/submissions/<int:submission_id>/files")
+@require_role("STUDENT")
+def submission_files(submission_id: int):
+    return jsonify({"data": service("student").files(current_user_id(), submission_id)})
 
 
 @bp.get("/grades")
