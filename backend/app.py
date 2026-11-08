@@ -14,15 +14,19 @@ from backend.db import Database
 from backend.errors import register_error_handlers
 from backend.logging_config import configure_logging, register_request_logging
 from backend.repositories import (
+    AdminRepository,
     CatalogRepository,
     EnrollmentRepository,
     StatisticsRepository,
+    StaffRepository,
     StudentRepository,
 )
 from backend.services import (
+    AdminService,
     CatalogService,
     EnrollmentService,
     HealthService,
+    StaffService,
     StatisticsService,
     StudentService,
 )
@@ -79,6 +83,8 @@ def create_app(config: dict | object | None = None) -> Flask:
         "statistics": StatisticsService(StatisticsRepository(db)),
         "health": HealthService(db),
         "student": StudentService(StudentRepository(db)),
+        "staff": StaffService(StaffRepository(db)),
+        "admin": AdminService(AdminRepository(db)),
     }
 
     register_error_handlers(app)
