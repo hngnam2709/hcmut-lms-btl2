@@ -77,6 +77,27 @@ class FakeHealthService:
         return {"status": "ok", "database": {"version": "8.4.13"}}
 
 
+class FakeStudentService:
+    def sections(self, student_id):
+        return [{"SectionID": 1, "student_id": student_id}]
+
+    def grades(self, student_id):
+        return [{"GradeID": 1, "student_id": student_id}]
+
+
+class FakeStaffService:
+    def sections(self, staff_id):
+        return [{"SectionID": 1, "staff_id": staff_id}]
+
+
+class FakeAdminService:
+    def users(self):
+        return [{"UserID": 301, "Role": "ADMIN"}]
+
+    def explore(self, table, limit):
+        return [{"table": table, "limit": limit}]
+
+
 @pytest.fixture
 def app():
     application = create_app({
@@ -90,6 +111,9 @@ def app():
         "catalog": FakeCatalogService(),
         "statistics": FakeStatisticsService(),
         "health": FakeHealthService(),
+        "student": FakeStudentService(),
+        "staff": FakeStaffService(),
+        "admin": FakeAdminService(),
     }
     return application
 
