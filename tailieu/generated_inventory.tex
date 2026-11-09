@@ -1,0 +1,262 @@
+% =====================================================================
+% AUTO-GENERATED from database/schema, constraints, indexes and ROW_COUNTS.md
+% Do not edit by hand; the rows are generated from the SQL inventory files.
+% =====================================================================
+\providecommand{\Tbl}[1]{\texttt{\detokenize{#1}}}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}C{0.6cm}L{3.0cm}C{1.2cm}L{2.9cm}C{0.9cm}C{0.9cm}C{0.9cm}L{4.1cm}@{}}
+\caption{Danh mục 22 bảng của cơ sở dữ liệu}\label{tab:table-inventory}\\
+\toprule
+\rowcolor{tableheader}
+\textbf{\#} & \textbf{Bảng} & \textbf{Cột} & \textbf{PK} & \textbf{FK} & \textbf{UQ} & \textbf{CK} & \textbf{Mục đích} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{tableheader}
+\textbf{\#} & \textbf{Bảng} & \textbf{Cột} & \textbf{PK} & \textbf{FK} & \textbf{UQ} & \textbf{CK} & \textbf{Mục đích} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & \Tbl{UserAccount} & 6 & \Tbl{UserID} & 0 & 1 & 3 & Tài khoản dùng chung; lưu email, họ tên, avatar, trạng thái, lần truy cập cuối. \\
+2 & \Tbl{Faculty} & 3 & \Tbl{FacultyID} & 0 & 0 & 1 & Danh mục khoa. \\
+3 & \Tbl{Student} & 3 & \Tbl{UserID} & 2 & 1 & 1 & Hồ sơ sinh viên (ISA của UserAccount) và khoa trực thuộc. \\
+4 & \Tbl{Staff} & 2 & \Tbl{UserID} & 2 & 0 & 0 & Hồ sơ giảng viên/cán bộ (ISA của UserAccount) và khoa. \\
+5 & \Tbl{Admin} & 1 & \Tbl{UserID} & 1 & 0 & 0 & Hồ sơ quản trị viên (ISA của UserAccount). \\
+6 & \Tbl{Semester} & 5 & \Tbl{SemesterID} & 0 & 1 & 3 & Học kỳ theo năm học và số học kỳ. \\
+7 & \Tbl{Course} & 6 & \Tbl{CourseID} & 2 & 1 & 2 & Môn học, số tín chỉ, khoa quản lý, người tạo. \\
+8 & \Tbl{CourseComponent} & 4 & \Tbl{ComponentID} & 1 & 1 & 1 & Thành phần môn học: lý thuyết hoặc thực hành/bài tập. \\
+9 & \Tbl{CourseSection} & 11 & \Tbl{SectionID} & 3 & 1 & 5 & Lớp học phần cụ thể trong học kỳ: lịch, phòng, sĩ số, giảng viên. \\
+10 & \Tbl{Enrollment} & 5 & \Tbl{EnrollmentID} & 2 & 1 & 1 & Ghi danh sinh viên vào lớp học phần; bảng trung tâm của CRUD. \\
+11 & \Tbl{Announcement} & 7 & \Tbl{AnnouncementID} & 2 & 0 & 1 & Thông báo của lớp học phần. \\
+12 & \Tbl{LearningResource} & 7 & \Tbl{ResourceID} & 1 & 0 & 2 & Tài nguyên học tập dùng chung. \\
+13 & \Tbl{Section_Resource} & 5 & \Tbl{SectionID, ResourceID} & 2 & 0 & 1 & Liên kết N:M giữa lớp học phần và tài nguyên. \\
+14 & \Tbl{Assessment} & 8 & \Tbl{AssessmentID} & 2 & 0 & 2 & Đánh giá chung của lớp: assignment/quiz, điểm tối đa, số lần làm. \\
+15 & \Tbl{Assignment} & 5 & \Tbl{AssessmentID} & 1 & 0 & 2 & Bài tập thuộc assessment; hạn nộp và số bài đã nộp (derived). \\
+16 & \Tbl{AssignmentAttachment} & 2 & \Tbl{AssessmentID, AttachmentURL} & 1 & 0 & 1 & Tệp đính kèm của bài tập (metadata). \\
+17 & \Tbl{Submission} & 9 & \Tbl{SubmissionID} & 3 & 1 & 4 & Bài nộp của sinh viên cho assignment. \\
+18 & \Tbl{SubmissionFile} & 6 & \Tbl{SubmissionID, FileNo} & 1 & 0 & 2 & Tệp trong một bài nộp (metadata). \\
+19 & \Tbl{Quiz} & 4 & \Tbl{AssessmentID} & 1 & 0 & 2 & Bài kiểm tra trắc nghiệm thuộc assessment. \\
+20 & \Tbl{QuizAttempt} & 7 & \Tbl{AttemptID} & 2 & 1 & 3 & Một lần làm quiz của sinh viên. \\
+21 & \Tbl{Grade} & 7 & \Tbl{GradeID} & 3 & 1 & 1 & Điểm của một enrollment cho một assessment. \\
+22 & \Tbl{Feedback} & 6 & \Tbl{FeedbackID} & 3 & 0 & 1 & Nhận xét, có thể trả lời lồng nhau. \\
+\end{longtable}}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}L{3.2cm}L{12.4cm}@{}}
+\caption{Danh sách cột của từng bảng (119 cột)}\label{tab:table-columns}\\
+\toprule
+\rowcolor{tableheader}
+\textbf{Bảng} & \textbf{Các cột} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{tableheader}
+\textbf{Bảng} & \textbf{Các cột} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\Tbl{UserAccount} & \Tbl{UserID, Email, FullName, AvatarURL, AccountStatus, LastAccessAt} \\
+\Tbl{Faculty} & \Tbl{FacultyID, FacultyName, FacultyNameEN} \\
+\Tbl{Student} & \Tbl{UserID, StudentCode, FacultyID} \\
+\Tbl{Staff} & \Tbl{UserID, FacultyID} \\
+\Tbl{Admin} & \Tbl{UserID} \\
+\Tbl{Semester} & \Tbl{SemesterID, AcademicYear, TermNo, StartDate, EndDate} \\
+\Tbl{Course} & \Tbl{CourseID, CourseCode, CourseName, Credits, FacultyID, CreatedByAdminID} \\
+\Tbl{CourseComponent} & \Tbl{ComponentID, CourseID, ComponentType, ComponentName} \\
+\Tbl{CourseSection} & \Tbl{SectionID, ComponentID, SemesterID, PrimaryInstructorID, SectionCode, Capacity, SectionStatus, DayOfWeek, StartTime, EndTime, RoomCode} \\
+\Tbl{Enrollment} & \Tbl{EnrollmentID, StudentID, SectionID, EnrollmentDate, EnrollmentStatus} \\
+\Tbl{Announcement} & \Tbl{AnnouncementID, SectionID, PostedByStaffID, Title, Content, PostedAt, ExpiredAt} \\
+\Tbl{LearningResource} & \Tbl{ResourceID, UploadedByStaffID, Title, Description, ResourceType, ResourceURL, UploadedAt} \\
+\Tbl{Section_Resource} & \Tbl{SectionID, ResourceID, PostedAt, DisplayOrder, IsVisible} \\
+\Tbl{Assessment} & \Tbl{AssessmentID, SectionID, CreatedByStaffID, Title, Description, CreatedAt, MaxScore, MaxAttempts} \\
+\Tbl{Assignment} & \Tbl{AssessmentID, OpenDate, DueDate, AllowLateSubmission, SubmissionCount} \\
+\Tbl{AssignmentAttachment} & \Tbl{AssessmentID, AttachmentURL} \\
+\Tbl{Submission} & \Tbl{SubmissionID, AssignmentID, StudentID, GradedByStaffID, AttemptNo, SubmittedAt, SubmissionStatus, Score, GradedAt} \\
+\Tbl{SubmissionFile} & \Tbl{SubmissionID, FileNo, FileName, FileURL, FileSize, UploadedAt} \\
+\Tbl{Quiz} & \Tbl{AssessmentID, OpenTime, CloseTime, DurationMinutes} \\
+\Tbl{QuizAttempt} & \Tbl{AttemptID, QuizID, StudentID, AttemptNo, StartedAt, FinishedAt, Score} \\
+\Tbl{Grade} & \Tbl{GradeID, EnrollmentID, AssessmentID, GradedByStaffID, Score, GradedAt, IsPublished} \\
+\Tbl{Feedback} & \Tbl{FeedbackID, SubmissionID, AuthorID, ParentFeedbackID, Content, CreatedAt} \\
+\end{longtable}}
+
+{\footnotesize\setlength{\tabcolsep}{2pt}
+\begin{longtable}{@{}L{2.9cm}L{2.8cm}L{2.4cm}L{2.2cm}L{3.45cm}L{1.5cm}@{}}
+\caption{35 khóa ngoại và quy tắc xóa/cập nhật}\label{tab:foreign-keys}\\
+\toprule
+\rowcolor{tableheader}
+\textbf{Bảng con} & \textbf{Cột} & \textbf{Bảng cha} & \textbf{Cột cha} & \textbf{Constraint} & \textbf{ON DELETE} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{tableheader}
+\textbf{Bảng con} & \textbf{Cột} & \textbf{Bảng cha} & \textbf{Cột cha} & \textbf{Constraint} & \textbf{ON DELETE} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\Tbl{Student} & \Tbl{UserID} & \Tbl{UserAccount} & \Tbl{UserID} & \Tbl{fk_student_user} & \Tbl{CASCADE} \\
+\Tbl{Student} & \Tbl{FacultyID} & \Tbl{Faculty} & \Tbl{FacultyID} & \Tbl{fk_student_faculty} & \Tbl{RESTRICT} \\
+\Tbl{Staff} & \Tbl{UserID} & \Tbl{UserAccount} & \Tbl{UserID} & \Tbl{fk_staff_user} & \Tbl{CASCADE} \\
+\Tbl{Staff} & \Tbl{FacultyID} & \Tbl{Faculty} & \Tbl{FacultyID} & \Tbl{fk_staff_faculty} & \Tbl{RESTRICT} \\
+\Tbl{Admin} & \Tbl{UserID} & \Tbl{UserAccount} & \Tbl{UserID} & \Tbl{fk_admin_user} & \Tbl{CASCADE} \\
+\Tbl{Course} & \Tbl{FacultyID} & \Tbl{Faculty} & \Tbl{FacultyID} & \Tbl{fk_course_faculty} & \Tbl{RESTRICT} \\
+\Tbl{Course} & \Tbl{CreatedByAdminID} & \Tbl{Admin} & \Tbl{UserID} & \Tbl{fk_course_admin} & \Tbl{RESTRICT} \\
+\Tbl{CourseComponent} & \Tbl{CourseID} & \Tbl{Course} & \Tbl{CourseID} & \Tbl{fk_component_course} & \Tbl{CASCADE} \\
+\Tbl{CourseSection} & \Tbl{ComponentID} & \Tbl{CourseComponent} & \Tbl{ComponentID} & \Tbl{fk_section_component} & \Tbl{RESTRICT} \\
+\Tbl{CourseSection} & \Tbl{SemesterID} & \Tbl{Semester} & \Tbl{SemesterID} & \Tbl{fk_section_semester} & \Tbl{RESTRICT} \\
+\Tbl{CourseSection} & \Tbl{PrimaryInstructorID} & \Tbl{Staff} & \Tbl{UserID} & \Tbl{fk_section_instructor} & \Tbl{SET NULL} \\
+\Tbl{Enrollment} & \Tbl{StudentID} & \Tbl{Student} & \Tbl{UserID} & \Tbl{fk_enrollment_student} & \Tbl{RESTRICT} \\
+\Tbl{Enrollment} & \Tbl{SectionID} & \Tbl{CourseSection} & \Tbl{SectionID} & \Tbl{fk_enrollment_section} & \Tbl{RESTRICT} \\
+\Tbl{Announcement} & \Tbl{SectionID} & \Tbl{CourseSection} & \Tbl{SectionID} & \Tbl{fk_announcement_section} & \Tbl{RESTRICT} \\
+\Tbl{Announcement} & \Tbl{PostedByStaffID} & \Tbl{Staff} & \Tbl{UserID} & \Tbl{fk_announcement_staff} & \Tbl{RESTRICT} \\
+\Tbl{LearningResource} & \Tbl{UploadedByStaffID} & \Tbl{Staff} & \Tbl{UserID} & \Tbl{fk_resource_staff} & \Tbl{RESTRICT} \\
+\Tbl{Section_Resource} & \Tbl{SectionID} & \Tbl{CourseSection} & \Tbl{SectionID} & \Tbl{fk_sr_section} & \Tbl{CASCADE} \\
+\Tbl{Section_Resource} & \Tbl{ResourceID} & \Tbl{LearningResource} & \Tbl{ResourceID} & \Tbl{fk_sr_resource} & \Tbl{CASCADE} \\
+\Tbl{Assessment} & \Tbl{SectionID} & \Tbl{CourseSection} & \Tbl{SectionID} & \Tbl{fk_assessment_section} & \Tbl{RESTRICT} \\
+\Tbl{Assessment} & \Tbl{CreatedByStaffID} & \Tbl{Staff} & \Tbl{UserID} & \Tbl{fk_assessment_staff} & \Tbl{RESTRICT} \\
+\Tbl{Assignment} & \Tbl{AssessmentID} & \Tbl{Assessment} & \Tbl{AssessmentID} & \Tbl{fk_assignment_assessment} & \Tbl{CASCADE} \\
+\Tbl{AssignmentAttachment} & \Tbl{AssessmentID} & \Tbl{Assignment} & \Tbl{AssessmentID} & \Tbl{fk_attachment_assignment} & \Tbl{CASCADE} \\
+\Tbl{Submission} & \Tbl{AssignmentID} & \Tbl{Assignment} & \Tbl{AssessmentID} & \Tbl{fk_submission_assignment} & \Tbl{RESTRICT} \\
+\Tbl{Submission} & \Tbl{StudentID} & \Tbl{Student} & \Tbl{UserID} & \Tbl{fk_submission_student} & \Tbl{RESTRICT} \\
+\Tbl{Submission} & \Tbl{GradedByStaffID} & \Tbl{Staff} & \Tbl{UserID} & \Tbl{fk_submission_staff} & \Tbl{SET NULL} \\
+\Tbl{SubmissionFile} & \Tbl{SubmissionID} & \Tbl{Submission} & \Tbl{SubmissionID} & \Tbl{fk_file_submission} & \Tbl{CASCADE} \\
+\Tbl{Quiz} & \Tbl{AssessmentID} & \Tbl{Assessment} & \Tbl{AssessmentID} & \Tbl{fk_quiz_assessment} & \Tbl{CASCADE} \\
+\Tbl{QuizAttempt} & \Tbl{QuizID} & \Tbl{Quiz} & \Tbl{AssessmentID} & \Tbl{fk_attempt_quiz} & \Tbl{RESTRICT} \\
+\Tbl{QuizAttempt} & \Tbl{StudentID} & \Tbl{Student} & \Tbl{UserID} & \Tbl{fk_attempt_student} & \Tbl{RESTRICT} \\
+\Tbl{Grade} & \Tbl{EnrollmentID} & \Tbl{Enrollment} & \Tbl{EnrollmentID} & \Tbl{fk_grade_enrollment} & \Tbl{RESTRICT} \\
+\Tbl{Grade} & \Tbl{AssessmentID} & \Tbl{Assessment} & \Tbl{AssessmentID} & \Tbl{fk_grade_assessment} & \Tbl{RESTRICT} \\
+\Tbl{Grade} & \Tbl{GradedByStaffID} & \Tbl{Staff} & \Tbl{UserID} & \Tbl{fk_grade_staff} & \Tbl{RESTRICT} \\
+\Tbl{Feedback} & \Tbl{SubmissionID} & \Tbl{Submission} & \Tbl{SubmissionID} & \Tbl{fk_feedback_submission} & \Tbl{CASCADE} \\
+\Tbl{Feedback} & \Tbl{AuthorID} & \Tbl{UserAccount} & \Tbl{UserID} & \Tbl{fk_feedback_author} & \Tbl{RESTRICT} \\
+\Tbl{Feedback} & \Tbl{ParentFeedbackID} & \Tbl{Feedback} & \Tbl{FeedbackID} & \Tbl{fk_feedback_parent} & \Tbl{SET NULL} \\
+\end{longtable}}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}L{2.9cm}L{3.8cm}L{8.7cm}@{}}
+\caption{39 ràng buộc CHECK theo miền giá trị và ngữ nghĩa}\label{tab:checks}\\
+\toprule
+\rowcolor{tableheader}
+\textbf{Bảng} & \textbf{Constraint} & \textbf{Biểu thức} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{tableheader}
+\textbf{Bảng} & \textbf{Constraint} & \textbf{Biểu thức} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\Tbl{UserAccount} & \Tbl{ck_user_status} & \Tbl{`AccountStatus` IN ('ACTIVE', 'LOCKED', 'DISABLED')} \\
+\Tbl{UserAccount} & \Tbl{ck_user_email} & \lstinline[basicstyle=\ttfamily\footnotesize]!`Email` LIKE '%_@_%._%' AND CHAR_LENGTH(`FullName`) > 0! \\
+\Tbl{UserAccount} & \Tbl{ck_user_avatar} & \Tbl{CHAR_LENGTH(`AvatarURL`) > 0} \\
+\Tbl{Faculty} & \Tbl{ck_faculty_name} & \Tbl{CHAR_LENGTH(`FacultyName`) > 0} \\
+\Tbl{Student} & \Tbl{ck_student_code} & \Tbl{CHAR_LENGTH(`StudentCode`) BETWEEN 4 AND 20} \\
+\Tbl{Semester} & \Tbl{ck_semester_term} & \Tbl{`TermNo` BETWEEN 1 AND 3} \\
+\Tbl{Semester} & \Tbl{ck_semester_dates} & \Tbl{`StartDate` < `EndDate`} \\
+\Tbl{Semester} & \Tbl{ck_semester_year} & \Tbl{`AcademicYear` REGEXP '^[0-9]{4}-[0-9]{4}$'} \\
+\Tbl{Course} & \Tbl{ck_course_credits} & \Tbl{`Credits` BETWEEN 1 AND 10} \\
+\Tbl{Course} & \Tbl{ck_course_code} & \Tbl{CHAR_LENGTH(`CourseCode`) > 0} \\
+\Tbl{CourseComponent} & \Tbl{ck_component_type} & \Tbl{`ComponentType` IN ('THEORY', 'PRACTICE')} \\
+\Tbl{CourseSection} & \Tbl{ck_section_capacity} & \Tbl{`Capacity` > 0} \\
+\Tbl{CourseSection} & \Tbl{ck_section_status} & \Tbl{`SectionStatus` IN ('OPEN', 'CLOSED', 'CANCELLED')} \\
+\Tbl{CourseSection} & \Tbl{ck_section_day} & \Tbl{`DayOfWeek` BETWEEN 1 AND 7} \\
+\Tbl{CourseSection} & \Tbl{ck_section_time} & \Tbl{`StartTime` < `EndTime`} \\
+\Tbl{CourseSection} & \Tbl{ck_section_room} & \Tbl{CHAR_LENGTH(`RoomCode`) > 0} \\
+\Tbl{Enrollment} & \Tbl{ck_enrollment_status} & \Tbl{`EnrollmentStatus` IN ('ACTIVE', 'DROPPED', 'COMPLETED')} \\
+\Tbl{Announcement} & \Tbl{ck_announcement_expiry} & \Tbl{`ExpiredAt` IS NULL OR `ExpiredAt` > `PostedAt`} \\
+\Tbl{LearningResource} & \Tbl{ck_resource_type} & \Tbl{`ResourceType` IN ('DOCUMENT', 'SLIDE', 'VIDEO', 'LINK')} \\
+\Tbl{LearningResource} & \Tbl{ck_resource_url} & \Tbl{CHAR_LENGTH(`ResourceURL`) > 0} \\
+\Tbl{Section_Resource} & \Tbl{ck_sr_order} & \Tbl{`DisplayOrder` >= 0} \\
+\Tbl{Assessment} & \Tbl{ck_assessment_score} & \Tbl{`MaxScore` > 0} \\
+\Tbl{Assessment} & \Tbl{ck_assessment_attempts} & \Tbl{`MaxAttempts` IS NULL OR `MaxAttempts` > 0} \\
+\Tbl{Assignment} & \Tbl{ck_assignment_period} & \Tbl{`OpenDate` < `DueDate`} \\
+\Tbl{Assignment} & \Tbl{ck_assignment_count} & \Tbl{`SubmissionCount` >= 0} \\
+\Tbl{AssignmentAttachment} & \Tbl{ck_attachment_url} & \Tbl{CHAR_LENGTH(`AttachmentURL`) > 0} \\
+\Tbl{Submission} & \Tbl{ck_submission_attempt_no} & \Tbl{`AttemptNo` > 0} \\
+\Tbl{Submission} & \Tbl{ck_submission_status} & \Tbl{`SubmissionStatus` IN ('DRAFT', 'SUBMITTED')} \\
+\Tbl{Submission} & \Tbl{ck_submission_score} & \Tbl{`Score` IS NULL OR `Score` >= 0} \\
+\Tbl{Submission} & \Tbl{ck_submission_grading} & \Tbl{(`Score` IS NULL AND `GradedAt` IS NULL) OR (`Score` IS NOT NULL AND `GradedAt` IS NOT NULL)} \\
+\Tbl{SubmissionFile} & \Tbl{ck_file_no} & \Tbl{`FileNo` > 0} \\
+\Tbl{SubmissionFile} & \Tbl{ck_file_size} & \Tbl{`FileSize` >= 0} \\
+\Tbl{Quiz} & \Tbl{ck_quiz_time} & \Tbl{`OpenTime` < `CloseTime`} \\
+\Tbl{Quiz} & \Tbl{ck_quiz_duration} & \Tbl{`DurationMinutes` > 0} \\
+\Tbl{QuizAttempt} & \Tbl{ck_quiz_attempt_no} & \Tbl{`AttemptNo` > 0} \\
+\Tbl{QuizAttempt} & \Tbl{ck_quiz_attempt_time} & \Tbl{`FinishedAt` IS NULL OR `FinishedAt` >= `StartedAt`} \\
+\Tbl{QuizAttempt} & \Tbl{ck_quiz_attempt_score} & \Tbl{`Score` IS NULL OR `Score` >= 0} \\
+\Tbl{Grade} & \Tbl{ck_grade_score} & \Tbl{`Score` >= 0} \\
+\Tbl{Feedback} & \Tbl{ck_feedback_content} & \Tbl{CHAR_LENGTH(`Content`) > 0} \\
+\end{longtable}}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}L{4.8cm}L{3.0cm}L{7.6cm}@{}}
+\caption{15 chỉ mục hỗ trợ lọc và join}\label{tab:indexes}\\
+\toprule
+\rowcolor{tableheader}
+\textbf{Index} & \textbf{Bảng} & \textbf{Cột} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{tableheader}
+\textbf{Index} & \textbf{Bảng} & \textbf{Cột} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\Tbl{idx_user_account_status} & \Tbl{UserAccount} & \Tbl{`AccountStatus`} \\
+\Tbl{idx_user_last_access} & \Tbl{UserAccount} & \Tbl{`LastAccessAt`} \\
+\Tbl{idx_course_faculty} & \Tbl{Course} & \Tbl{`FacultyID`, `CourseCode`} \\
+\Tbl{idx_component_course_type} & \Tbl{CourseComponent} & \Tbl{`CourseID`, `ComponentType`} \\
+\Tbl{idx_section_schedule} & \Tbl{CourseSection} & \Tbl{`SemesterID`, `DayOfWeek`, `StartTime`, `EndTime`} \\
+\Tbl{idx_section_instructor_semester} & \Tbl{CourseSection} & \Tbl{`PrimaryInstructorID`, `SemesterID`} \\
+\Tbl{idx_enrollment_section_status} & \Tbl{Enrollment} & \Tbl{`SectionID`, `EnrollmentStatus`} \\
+\Tbl{idx_enrollment_student_status} & \Tbl{Enrollment} & \Tbl{`StudentID`, `EnrollmentStatus`} \\
+\Tbl{idx_announcement_section_posted} & \Tbl{Announcement} & \Tbl{`SectionID`, `PostedAt`} \\
+\Tbl{idx_resource_staff_type} & \Tbl{LearningResource} & \Tbl{`UploadedByStaffID`, `ResourceType`} \\
+\Tbl{idx_submission_assignment_status} & \Tbl{Submission} & \Tbl{`AssignmentID`, `SubmissionStatus`} \\
+\Tbl{idx_submission_student_submitted} & \Tbl{Submission} & \Tbl{`StudentID`, `SubmittedAt`} \\
+\Tbl{idx_quiz_attempt_student} & \Tbl{QuizAttempt} & \Tbl{`StudentID`, `StartedAt`} \\
+\Tbl{idx_grade_assessment_published} & \Tbl{Grade} & \Tbl{`AssessmentID`, `IsPublished`} \\
+\Tbl{idx_feedback_parent} & \Tbl{Feedback} & \Tbl{`ParentFeedbackID`} \\
+\end{longtable}}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}C{0.8cm}L{4.6cm}C{2.0cm}C{2.0cm}@{}}
+\caption{Số hàng seed của 22 bảng (mọi bảng đạt $\geq 5$)}\label{tab:seed-counts}\\
+\toprule
+\rowcolor{tableheader}
+\textbf{\#} & \textbf{Bảng} & \textbf{Số hàng} & \textbf{Đạt $\geq 5$?} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{tableheader}
+\textbf{\#} & \textbf{Bảng} & \textbf{Số hàng} & \textbf{Đạt $\geq 5$?} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & \Tbl{Admin} & 5 & Có \\
+2 & \Tbl{Announcement} & 6 & Có \\
+3 & \Tbl{Assessment} & 11 & Có \\
+4 & \Tbl{Assignment} & 6 & Có \\
+5 & \Tbl{AssignmentAttachment} & 6 & Có \\
+6 & \Tbl{Course} & 5 & Có \\
+7 & \Tbl{CourseComponent} & 8 & Có \\
+8 & \Tbl{CourseSection} & 8 & Có \\
+9 & \Tbl{Enrollment} & 16 & Có \\
+10 & \Tbl{Faculty} & 5 & Có \\
+11 & \Tbl{Feedback} & 7 & Có \\
+12 & \Tbl{Grade} & 10 & Có \\
+13 & \Tbl{LearningResource} & 8 & Có \\
+14 & \Tbl{Quiz} & 5 & Có \\
+15 & \Tbl{QuizAttempt} & 9 & Có \\
+16 & \Tbl{Section_Resource} & 7 & Có \\
+17 & \Tbl{Semester} & 5 & Có \\
+18 & \Tbl{Staff} & 5 & Có \\
+19 & \Tbl{Student} & 8 & Có \\
+20 & \Tbl{Submission} & 13 & Có \\
+21 & \Tbl{SubmissionFile} & 6 & Có \\
+22 & \Tbl{UserAccount} & 18 & Có \\
+\end{longtable}}
