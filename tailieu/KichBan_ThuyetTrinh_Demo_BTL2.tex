@@ -1,0 +1,1729 @@
+% =====================================================================
+%  KỊCH BẢN THUYẾT TRÌNH & DEMO BTL2 - HỆ THỐNG QUẢN LÝ HỌC TẬP
+%  Mục đích: tài liệu nói trước thầy, tập trung vào CSDL.
+%  Chỉ giao file .tex theo yêu cầu; không xuất PDF trong thư mục project.
+%  Biên dịch thử (nếu cần):
+%      xelatex KichBan_ThuyetTrinh_Demo_BTL2.tex
+%      xelatex KichBan_ThuyetTrinh_Demo_BTL2.tex
+% =====================================================================
+\documentclass[a4paper,13pt]{extarticle}
+
+% ==================================================
+% 1. PAGE LAYOUT
+% ==================================================
+\usepackage[
+    top=2cm,
+    bottom=2cm,
+    left=2.5cm,
+    right=2.5cm
+]{geometry}
+
+\usepackage{setspace}
+\setstretch{1.35}
+\setlength{\parindent}{1.2em}
+\setlength{\parskip}{3pt}
+\usepackage{indentfirst}
+
+% ==================================================
+% 2. VIETNAMESE AND FONT
+% ==================================================
+\usepackage{fontspec}
+\usepackage{polyglossia}
+
+\setdefaultlanguage{vietnamese}
+\setotherlanguage{english}
+
+\IfFontExistsTF{Times New Roman}{
+    \setmainfont{Times New Roman}
+}{
+    \setmainfont{DejaVu Serif}
+}
+\IfFontExistsTF{Arial}{
+    \setsansfont{Arial}
+}{
+    \setsansfont{DejaVu Sans}
+}
+\IfFontExistsTF{Courier New}{
+    \setmonofont{Courier New}
+}{
+    \setmonofont{DejaVu Sans Mono}[Scale=0.85]
+}
+
+% ==================================================
+% 3. MATH, GRAPHICS, COLORS
+% ==================================================
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{tikz}
+
+\definecolor{tableheader}{RGB}{220,230,241}
+\definecolor{navy}{RGB}{20,55,120}
+\definecolor{dkgreen}{RGB}{0,100,0}
+\definecolor{gray}{RGB}{100,100,100}
+\definecolor{lightgray}{RGB}{245,245,245}
+\definecolor{warn}{RGB}{180,50,30}
+
+% ==================================================
+% 4. TABLES, LISTS, CODE
+% ==================================================
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=1.4em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=2pt,topsep=3pt}
+
+\usepackage{listings}
+\lstdefinestyle{sql}{
+    language=SQL,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{navy}\bfseries,
+    commentstyle=\color{dkgreen}\itshape,
+    stringstyle=\color{warn},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=6pt,
+    frame=single,
+    rulecolor=\color{gray!50},
+    backgroundcolor=\color{lightgray},
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    tabsize=2,
+    xleftmargin=1.2em,
+    framexleftmargin=1em,
+    aboveskip=6pt,
+    belowskip=6pt
+}
+\lstdefinestyle{shell}{
+    language=bash,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{navy}\bfseries,
+    commentstyle=\color{dkgreen}\itshape,
+    frame=single,
+    rulecolor=\color{gray!50},
+    backgroundcolor=\color{lightgray},
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    xleftmargin=1.2em,
+    framexleftmargin=1em,
+    aboveskip=6pt,
+    belowskip=6pt
+}
+
+% ==================================================
+% 5. HYPERREF, HEADER
+% ==================================================
+\usepackage[
+    colorlinks=true,
+    linkcolor=navy,
+    urlcolor=navy,
+    citecolor=navy,
+    pdftitle={Kich ban thuyet trinh va demo BTL2},
+    pdfauthor={Nhom BTL2}
+]{hyperref}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{gray}{Kịch bản thuyết trình \& demo BTL2}}
+\fancyhead[R]{\small\textcolor{gray}{Database-first}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ==================================================
+% 6. SHORTCUTS
+% ==================================================
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\codebreak}[1]{\texttt{#1}}
+\newcommand{\cue}[1]{\par\smallskip\noindent\textbf{\textcolor{navy}{[#1]}}\par\nopagebreak\smallskip}
+\newenvironment{loi}{\begin{quote}\setlength{\parindent}{0pt}}{\end{quote}}
+\newcommand{\chot}[1]{\par\smallskip\noindent\textbf{Chốt:} #1\par}
+\newcommand{\qa}[1]{\par\medskip\noindent\textbf{\textcolor{navy}{Hỏi: #1}}\par\noindent\textbf{Đáp:}\ }
+\newcommand{\muc}[1]{\par\medskip\noindent\textbf{\textcolor{navy}{#1}}\par}
+
+\captionsetup{font=small,labelfont=bf}
+
+\begin{document}
+\sloppy
+\setlength{\emergencystretch}{3em}
+
+% =====================================================================
+% TITLE PAGE
+% =====================================================================
+\begin{titlepage}
+\begin{center}
+    {\Large ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH}\\[0.25cm]
+    {\Large TRƯỜNG ĐẠI HỌC BÁCH KHOA}\\[0.25cm]
+    {\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH}\\[1.2cm]
+
+    {\Huge\bfseries KỊCH BẢN THUYẾT TRÌNH \& DEMO}\\[0.4cm]
+    {\LARGE\bfseries BTL2 --- HỆ THỐNG QUẢN LÝ HỌC TẬP}\\[0.35cm]
+    {\large Phiên bản database-first --- khoảng 20 phút}\\[1.4cm]
+
+    \begin{tabular}{@{}ll@{}}
+        \textbf{Nhóm:} & \rule{7cm}{0.4pt} \\[0.25cm]
+        \textbf{Thành viên:} & \rule{7cm}{0.4pt} \\[0.25cm]
+        & \rule{7cm}{0.4pt} \\[0.25cm]
+        & \rule{7cm}{0.4pt} \\[0.25cm]
+        & \rule{7cm}{0.4pt} \\[0.25cm]
+        & \rule{7cm}{0.4pt} \\[0.25cm]
+        \textbf{Giảng viên hướng dẫn:} & \rule{7cm}{0.4pt} \\
+    \end{tabular}
+
+    \vfill
+    {\small Tài liệu này là kịch bản nói, không phải báo cáo nộp.\\
+    Chỉ giao file \code{.tex}; không kèm PDF.}\\[0.4cm]
+    {\small Thành phố Hồ Chí Minh, tháng 11 năm 2026}
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% =====================================================================
+\section*{Cách dùng tài liệu}
+\addcontentsline{toc}{section}{Cách dùng tài liệu}
+% =====================================================================
+
+Tài liệu này viết theo dạng \textbf{lời thoại có chỉ dẫn}. Khi tập, bạn không cần đọc nguyên văn; hãy nói theo ý, miễn giữ đủ ba thứ: \emph{mục đích}, \emph{thao tác}, \emph{điểm chốt}. Các nhãn được dùng thống nhất:
+
+\begin{itemize}
+    \item \cue{NÓI} là lời có thể nói gần như nguyên văn trước thầy.
+    \item \cue{LÀM} là thao tác cụ thể: mở terminal, gõ lệnh, bấm nút, chọn tab.
+    \item \cue{CHỈ} là chỗ cần chỉ tay/chuột vào màn hình hoặc kết quả.
+    \item \cue{NẾU THẦY HỎI} là câu trả lời chuẩn bị sẵn cho câu hỏi khó.
+    \item \cue{CHỐT} là một câu ngắn để kết thúc ý, giúp thầy nhớ.
+\end{itemize}
+
+\muc{Nguyên tắc khi nói}
+\begin{enumerate}
+    \item Nói \textbf{mục đích trước}, chi tiết sau: ``Em kiểm tra ràng buộc trùng lịch bằng trigger, vì CHECK không truy vấn được bảng khác''.
+    \item Khi màn hình hiện lỗi, đừng nói ``app lỗi''. Nói rõ: ``Đây là lỗi MySQL mã 1644 do trigger \code{SIGNAL}, app chỉ hiển thị lại''.
+    \item Không đọc code từng dòng. Chỉ vào 2--3 dòng quan trọng: \code{BEFORE INSERT}, \code{FOR EACH ROW}, \code{SIGNAL}, \code{FOR UPDATE}, \code{AFTER INSERT}.
+    \item Luôn quay về câu hỏi của môn CSDL: \emph{dữ liệu được bảo vệ ở đâu, tại sao chọn ràng buộc này mà không chọn cái khác, chi phí là gì}.
+\end{enumerate}
+
+% =====================================================================
+\section{Timeline 20 phút}
+% =====================================================================
+
+\begin{longtable}{p{2.1cm}p{4.4cm}p{7.6cm}}
+\toprule
+\textbf{Thời gian} & \textbf{Việc làm} & \textbf{Mục đích} \\
+\midrule
+\endhead
+0:00--1:00 & Chào, giới thiệu nhóm, bài toán & Cho thầy biết nhóm làm gì; nói rõ hôm nay đi từ CSDL. \\
+1:00--3:30 & Mô hình 22 bảng & Chứng minh hiểu nghiệp vụ, chuẩn hóa, khóa, quan hệ. \\
+3:30--5:30 & Ràng buộc: PK, FK, UNIQUE, CHECK & Chứng minh dữ liệu sai bị chặn ngay ở tầng bảng. \\
+5:30--8:00 & Trigger & Chứng minh các luật nhiều hàng/nhiều bảng không thể dùng CHECK. \\
+8:00--10:00 & Procedure \& function & Chứng minh transaction, locking, cursor, xử lý lỗi. \\
+10:00--18:30 & Demo & Cho thầy thấy lý thuyết chạy thật: UI, SQL, lỗi, kết quả. \\
+18:30--20:00 & Tổng kết \& Q\&A & Chốt 3 điểm mạnh, 2 hạn chế, cảm ơn. \\
+\bottomrule
+\end{longtable}
+
+\noindent\textit{Ghi chú: nếu thầy hỏi nhiều ở phần lý thuyết, rút demo UI còn 4--5 phút; tuyệt đối không bỏ phần trigger vì đó là điểm khác biệt của BTL2.}
+
+% =====================================================================
+\section{Mở đầu: nhóm làm gì và vì sao đi từ CSDL}
+% =====================================================================
+
+\cue{NÓI}
+\begin{loi}
+Dạ thưa thầy, nhóm em làm BTL2 với đề tài \textbf{Hệ thống quản lý học tập} cho trường đại học. Nhóm em có năm thành viên, phân công theo ba mảng: một bạn phụ trách mô hình dữ liệu và ràng buộc; một bạn phụ trách trigger, procedure, function; một bạn phụ trách ứng dụng Flask; một bạn phụ trách kiểm thử và dữ liệu mẫu; một bạn phụ trách tài liệu và demo. Em là người trình bày chính hôm nay.
+
+Điểm em muốn nói trước: \textbf{đây là môn CSDL}, nên nhóm em không bắt đầu bằng giao diện. Nhóm em bắt đầu bằng câu hỏi: dữ liệu nào cần lưu, quan hệ nào cần bảo toàn, luật nào phải chặn kể cả khi có người dùng SQL trực tiếp. Giao diện chỉ là một cách gọi vào CSDL; nguồn sự thật cuối cùng là MySQL.
+\end{loi}
+
+\cue{CHỈ}
+Vào trang chủ ứng dụng, chỉ vào dòng ``MySQL 8 $\cdot$ Flask $\cdot$ Bootstrap offline'' và badge sức khỏe API.
+
+\cue{NÓI}
+\begin{loi}
+Sản phẩm hiện tại có \textbf{22 bảng}, \textbf{119 cột}, \textbf{35 khóa ngoại}, \textbf{10 ràng buộc UNIQUE}, \textbf{39 ràng buộc CHECK}, \textbf{13 trigger}, \textbf{5 procedure} và \textbf{2 function}. Ứng dụng Flask không tự viết logic rải rác; các thao tác ghi danh đi qua procedure, các thống kê gọi function, còn các luật nhiều hàng được giữ ở trigger.
+
+Hôm nay em xin đi theo thứ tự: mô hình dữ liệu, ràng buộc, trigger, procedure/function, rồi demo. Phần nào thầy thấy chưa rõ, thầy cứ cắt ngang; em có phần hỏi đáp ở cuối và các câu trả lời chuẩn bị sẵn.
+\end{loi}
+
+\cue{CHỐT}
+``Nếu thầy chỉ nhớ một câu: nhóm em đặt luật ở tầng dữ liệu trước, rồi mới cho ứng dụng gọi vào.''
+
+% =====================================================================
+\section{Mô hình dữ liệu: 22 bảng và các quyết định}
+% =====================================================================
+
+\subsection{Bức tranh 5 miền}
+
+\cue{NÓI}
+\begin{loi}
+Nhóm em nhìn 22 bảng theo năm miền nghiệp vụ, chứ không học thuộc từng bảng.
+
+\textbf{Miền 1 --- Tổ chức học vụ:} \code{Faculty}, \code{Semester}, \code{Course}, \code{CourseComponent}, \code{CourseSection}, \code{LearningResource}, \code{Section_Resource}, \code{Announcement}. Đây là nơi mô tả trường có khoa nào, môn nào, môn gồm lý thuyết và bài tập ra sao, mỗi học kỳ mở lớp nào, lớp dùng tài nguyên nào.
+
+\textbf{Miền 2 --- Người dùng:} \code{UserAccount}, \code{Student}, \code{Staff}, \code{Admin}. Em tách tài khoản chung khỏi hồ sơ riêng để không lặp email, mật khẩu, trạng thái ở ba nơi.
+
+\textbf{Miền 3 --- Ghi danh và điểm:} \code{Enrollment}, \code{Grade}. Ghi danh là cầu nối giữa sinh viên và lớp; điểm gắn với ghi danh và bài đánh giá.
+
+\textbf{Miền 4 --- Bài tập và bài nộp:} \code{Assessment}, \code{Assignment}, \code{AssignmentAttachment}, \code{Quiz}, \code{QuizAttempt}, \code{Submission}, \code{SubmissionFile}. Trong đó \code{Assessment} giữ phần chung, \code{Assignment} và \code{Quiz} là hai loại cụ thể.
+
+\textbf{Miền 5 --- Phản hồi:} \code{Feedback}. Phản hồi gắn với bài nộp, có thể trả lời phản hồi cha.
+\end{loi}
+
+\begin{longtable}{p{3.4cm}p{5.2cm}p{5.4cm}}
+\caption{Năm miền bảng và câu hỏi nghiệp vụ tương ứng}\\
+\toprule
+\textbf{Miền} & \textbf{Bảng chính} & \textbf{Câu hỏi nghiệp vụ} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Miền} & \textbf{Bảng chính} & \textbf{Câu hỏi nghiệp vụ} \\
+\midrule
+\endhead
+Tổ chức học vụ & \code{Faculty}, \code{Semester}, \code{Course}, \code{CourseComponent}, \code{CourseSection} & Trường dạy môn gì, mở lớp nào, ai dạy, phòng nào, thời gian nào? \\
+Tài nguyên & \code{LearningResource}, \code{Section_Resource}, \code{Announcement} & Lớp dùng tài liệu nào, thông báo nào? \\
+Người dùng & \code{UserAccount}, \code{Student}, \code{Staff}, \code{Admin} & Một người là sinh viên, giảng viên hay quản trị? \\
+Ghi danh \& điểm & \code{Enrollment}, \code{Grade} & Sinh viên học lớp nào, điểm bài nào? \\
+Bài tập \& nộp bài & \code{Assessment}, \code{Assignment}, \code{Quiz}, \code{Submission}, \code{QuizAttempt}, file đính kèm & Bài tập mở/đóng khi nào, sinh viên nộp mấy lần, file nào? \\
+Phản hồi & \code{Feedback} & Ai phản hồi bài nào, phản hồi có trả lời phản hồi trước không? \\
+\bottomrule
+\end{longtable}
+
+\subsection{Vì sao tách Course, CourseComponent, CourseSection?}
+
+\cue{NÓI}
+\begin{loi}
+Nếu gộp cả ba vào một bảng, mỗi lần mở một lớp mới em phải lặp lại tên môn, số tín chỉ, mô tả môn, rồi thông tin lớp. Đó là dư thừa và dễ sai khi sửa. Nhóm em tách ba mức:
+
+\begin{itemize}
+    \item \code{Course} là \textbf{danh mục môn}: mã môn, tên, số tín chỉ, khoa.
+    \item \code{CourseComponent} là \textbf{thành phần của môn}: lý thuyết, bài tập, thí nghiệm. Một môn có thể có nhiều thành phần.
+    \item \code{CourseSection} là \textbf{lớp được mở trong một học kỳ}: mã lớp, giảng viên, sĩ số, phòng, thứ, giờ.
+\end{itemize}
+
+Nhờ vậy, học kỳ sau mở lại môn cũ thì chỉ tạo \code{CourseSection} mới, không nhân bản thông tin môn. Đây là chuẩn hóa 3NF: thông tin môn phụ thuộc khóa môn, thông tin lớp phụ thuộc khóa lớp.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không gộp \code{CourseComponent} vào \code{Course}?''
+\begin{loi}
+Vì một môn có nhiều thành phần, và mỗi thành phần có thể có cách đánh giá, số tiết, hoặc tài nguyên riêng. Nếu gộp, em phải dùng các cột kiểu \code{Component1}, \code{Component2}, hoặc lặp dòng môn --- cả hai đều vi phạm 1NF/2NF. Tách bảng cho phép quan hệ 1:N rõ ràng.
+\end{loi}
+
+\subsection{Vì sao Assessment, Assignment, Quiz tách?}
+
+\cue{NÓI}
+\begin{loi}
+\code{Assessment} giữ các cột chung: bài đánh giá thuộc lớp nào, tên, điểm tối đa, ngày mở, ngày đóng, có cho nộp muộn không, số lần tối đa, ai tạo. \code{Assignment} thêm các cột đặc thù của bài tập; \code{Quiz} thêm các cột đặc thù của bài trắc nghiệm. Đây là mô hình \textbf{class-table inheritance}: bảng cha giữ phần chung, bảng con giữ phần riêng, khóa chính của con cũng là khóa ngoại trỏ về cha.
+
+Cách này tránh được bảng \code{Assessment} phình ra với nhiều cột NULL: cột chỉ dùng cho quiz thì không cần nằm ở assignment. Đổi lại, khi truy vấn phải join. Với quy mô đồ án, join này rẻ và rõ nghĩa hơn.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vậy một \code{AssessmentID} có thể vừa là Assignment vừa là Quiz không?''
+\begin{loi}
+Trong mô hình này, về mặt vật lý MySQL không tự chặn điều đó, vì hai bảng con chỉ cùng trỏ về cha. Nhóm em kiểm soát ở tầng ứng dụng: khi tạo assessment, service chỉ tạo đúng một loại. Nếu làm chặt hơn ở CSDL, có thể thêm cột \code{AssessmentType} ở bảng cha và trigger kiểm tra sự tồn tại tương ứng. Nhóm em chọn cách đơn giản hơn vì phạm vi BTL2 và vì loại assessment đã được xác định ngay từ lúc tạo.
+\end{loi}
+
+\subsection{Vì sao SubmissionCount lại được lưu?}
+
+\cue{NÓI}
+\begin{loi}
+Đây là chỗ nhóm em \textbf{cố ý phi chuẩn hóa có kiểm soát}. Đúng ra số bài nộp có thể đếm bằng \code{COUNT} mỗi lần xem. Nhưng trang danh sách bài tập cần hiển thị số bài nộp liên tục; đếm lại trên bảng \code{Submission} mỗi lần sẽ tốn hơn. Nhóm em lưu \code{SubmissionCount} trong \code{Assignment} và dùng ba trigger \code{AFTER INSERT}, \code{AFTER DELETE}, \code{AFTER UPDATE} để giữ nó khớp.
+
+Đây không phải chuẩn hóa 3NF tuyệt đối, mà là \textbf{denormalization có chủ đích}: đổi một chút dư thừa lấy tốc độ đọc, nhưng phải có cơ chế tự động bảo trì. Nếu không có trigger, đây sẽ là nguồn sai dữ liệu; có trigger thì nó là derived attribute được kiểm soát.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vậy sao không dùng view hoặc tính on-the-fly?''
+\begin{loi}
+View vẫn phải đếm mỗi lần đọc, không giải quyết chi phí. Tính on-the-fly thì đúng nhưng chậm hơn khi danh sách dài. Nhóm em chọn lưu vì đây là bài toán đọc nhiều; cái giá là phải test kỹ ba thao tác INSERT/UPDATE/DELETE. Nếu hệ thống rất lớn, có thể dùng bảng thống kê riêng hoặc cache, nhưng với đồ án thì cột này là lựa chọn hợp lý.
+\end{loi}
+
+\subsection{Vì sao dùng khóa thay thế?}
+
+\cue{NÓI}
+\begin{loi}
+Các bảng chính dùng khóa thay thế \code{INT AUTO_INCREMENT}, ví dụ \code{StudentID}, \code{SectionID}, \code{EnrollmentID}. Lý do: khóa tự nhiên như mã sinh viên hay mã môn có thể đổi định dạng, có thể nhập sai, và thường là chuỗi dài. Khóa thay thế ổn định, ngắn, join nhanh, không lộ thông tin.
+
+Nhưng nhóm em vẫn giữ \textbf{unique key} trên mã tự nhiên: \code{StudentCode}, \code{CourseCode}, \code{SectionCode}. Như vậy vừa có khóa kỹ thuật ổn định, vừa bảo vệ tính duy nhất của mã nghiệp vụ.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Dùng khóa tự nhiên có sai không?''
+\begin{loi}
+Không sai. Nếu mã thật sự bất biến và ngắn, dùng làm PK là hợp lý. Ở đây nhóm em chọn surrogate vì mã sinh viên/mã lớp có thể thay đổi theo quy chế, và vì khóa ngoại bằng số dễ đọc hơn. Đây là quyết định thiết kế, không phải chân lý.
+\end{loi}
+
+\subsection{Bảng yếu, bảng nối, thuộc tính đa trị}
+
+\cue{NÓI}
+\begin{loi}
+Ba chỗ dễ bị hỏi nhất là bảng yếu và bảng nối.
+
+\code{AssignmentAttachment} có khóa chính là \code{(AssessmentID, AttachmentURL)}. Nó không có ID riêng vì một tệp đính kèm chỉ tồn tại khi có bài tập; URL là định danh trong phạm vi bài tập. Đây là \textbf{weak entity}.
+
+\code{SubmissionFile} có khóa chính \code{(SubmissionID, FileNo)}. Mỗi bài nộp có nhiều tệp; \code{FileNo} giữ thứ tự và định danh tệp trong bài nộp. Cũng là weak entity.
+
+\code{Section_Resource} là bảng nối N:M giữa lớp và tài nguyên, có thêm cột \code{DisplayOrder} để quy định thứ tự hiển thị. Đây là \textbf{quan hệ N:M có thuộc tính}; nếu chỉ dùng bảng nối hai cột thì không lưu được thứ tự.
+
+\code{AssignmentAttachment} và \code{SubmissionFile} là hai ví dụ cho thuộc tính đa trị: một bài tập có nhiều file, một bài nộp có nhiều file.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không tạo ID riêng cho mọi bảng cho đồng nhất?''
+\begin{loi}
+Có thể, nhưng khi đó phải thêm unique key \code{(AssessmentID, AttachmentURL)} để vẫn chặn trùng, và ID riêng không mang thêm nghĩa nghiệp vụ. Khóa ghép ở đây vừa là định danh vừa là ràng buộc tự nhiên: không thể có hai tệp cùng URL trong một bài tập. Nhóm em chọn khóa ghép vì nó biểu đạt đúng bản chất weak entity.
+\end{loi}
+
+% =====================================================================
+\section{Ràng buộc: bốn lớp bảo vệ dữ liệu}
+% =====================================================================
+
+\cue{NÓI}
+\begin{loi}
+Nhóm em không coi ràng buộc là trang trí. Mỗi ràng buộc trả lời một câu hỏi: nếu người dùng nhập sai, ai chặn? Nhóm em dùng bốn lớp, theo thứ tự từ rẻ đến đắt:
+
+\begin{enumerate}
+    \item \textbf{Kiểu dữ liệu}: \code{INT}, \code{DATE}, \code{DECIMAL}, \code{VARCHAR}. Sai kiểu thì MySQL không nhận.
+    \item \textbf{Ràng buộc khai báo}: \code{PRIMARY KEY}, \code{FOREIGN KEY}, \code{UNIQUE}, \code{CHECK}, \code{NOT NULL}. Đây là lớp chính, chạy trong mọi thao tác SQL.
+    \item \textbf{Trigger}: các luật cần đọc \emph{nhiều hàng} hoặc \emph{bảng khác}, mà CHECK không làm được.
+    \item \textbf{Procedure/transaction}: các luật cần nhiều bước, cần khóa, cần rollback, hoặc cần trả lỗi thân thiện.
+\end{enumerate}
+
+Bốn lớp này không thay thế nhau; chúng bổ sung. Ví dụ sĩ số: CHECK chỉ kiểm tra \code{Capacity > 0}; trigger đếm số ghi danh thực tế; procedure khóa dòng lớp rồi mới đếm để tránh hai người cùng vượt sĩ số.
+\end{loi}
+
+\subsection{PK, FK, UNIQUE, CHECK}
+
+\begin{longtable}{p{2.6cm}p{5.2cm}p{5.6cm}}
+\caption{Bốn loại ràng buộc khai báo và vai trò}\\
+\toprule
+\textbf{Loại} & \textbf{Ví dụ trong schema} & \textbf{Chặn điều gì?} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Loại} & \textbf{Ví dụ} & \textbf{Chặn điều gì?} \\
+\midrule
+\endhead
+\code{PRIMARY KEY} & \code{Enrollment(EnrollmentID)} & Hai dòng cùng khóa; NULL trong khóa chính. \\
+\code{FOREIGN KEY} & \code{Enrollment.StudentID} $\to$ \code{Student.UserID} & Ghi danh cho sinh viên không tồn tại; xóa sinh viên còn ghi danh. \\
+\code{UNIQUE} & \code{UNIQUE(StudentID, SectionID)} & Một sinh viên ghi danh hai lần cùng một lớp. \\
+\code{CHECK} & \code{Capacity > 0}, \code{StartDate < EndDate} & Giá trị vô lý trong một hàng. \\
+\code{NOT NULL} & \code{UserAccount.Email} & Thiếu thông tin bắt buộc. \\
+\bottomrule
+\end{longtable}
+
+\cue{NÓI}
+\begin{loi}
+Em lấy ba ví dụ để thầy thấy nhóm em không đặt UNIQUE bừa.
+
+\textbf{Thứ nhất, ghi danh trùng.} \code{Enrollment} có \code{UNIQUE(StudentID, SectionID)}. Một sinh viên chỉ được có một dòng ghi danh cho một lớp. Nếu chỉ đặt UNIQUE riêng \code{StudentID} thì sinh viên không học được lớp thứ hai; nếu chỉ đặt UNIQUE riêng \code{SectionID} thì mỗi lớp chỉ có một sinh viên. Phải là \textbf{unique kép}.
+
+\textbf{Thứ hai, điểm trùng.} \code{Grade} có \code{UNIQUE(EnrollmentID, AssessmentID)}. Mỗi ghi danh chỉ có một điểm cho một bài đánh giá. Nếu cho phép nhiều dòng, điểm chính thức sẽ không xác định.
+
+\textbf{Thứ ba, bài nộp trùng lần.} \code{Submission} có \code{UNIQUE(AssignmentID, StudentID, AttemptNo)}. Cùng một sinh viên, cùng một bài, lần nộp số 2 chỉ có một. Đây là unique kép ba cột, vì lần nộp chỉ duy nhất trong phạm vi bài và sinh viên.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không dùng UNIQUE một cột cho đơn giản?''
+\begin{loi}
+Vì tính duy nhất trong nghiệp vụ là duy nhất \emph{theo cặp} hoặc \emph{theo bộ}. UNIQUE một cột sẽ chặn nhầm: một sinh viên không được học nhiều lớp, một bài không được có nhiều sinh viên nộp. Ràng buộc phải khớp với câu hỏi nghiệp vụ, không phải cho dễ viết.
+\end{loi}
+
+\subsection{Chính sách xóa của khóa ngoại}
+
+\cue{NÓI}
+\begin{loi}
+Khóa ngoại không chỉ để join; nó còn quy định chuyện gì xảy ra khi cha bị xóa. Nhóm em dùng ba chính sách:
+
+\begin{itemize}
+    \item \code{ON DELETE CASCADE}: xóa cha thì xóa con. Dùng cho bảng con gắn chặt với cha: \code{Student} theo \code{UserAccount}, \code{Assignment} theo \code{Assessment}, \code{SubmissionFile} theo \code{Submission}.
+    \item \code{ON DELETE RESTRICT}: cấm xóa cha nếu còn con. Dùng cho dữ liệu cần bảo toàn: không xóa \code{Enrollment} nếu còn \code{Grade}; không xóa \code{CourseSection} nếu còn ghi danh.
+    \item \code{ON DELETE SET NULL}: xóa cha thì con vẫn còn, nhưng tham chiếu thành NULL. Dùng cho quan hệ tùy chọn: \code{CourseSection.PrimaryInstructorID} có thể NULL; \code{Feedback.ParentFeedbackID} có thể NULL.
+\end{itemize}
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không CASCADE tất cả cho tiện?''
+\begin{loi}
+CASCADE tất cả sẽ xóa dây chuyền ngoài ý muốn. Nếu xóa một \code{CourseSection} mà cascade xuống \code{Enrollment}, rồi cascade tiếp xuống \code{Grade}, em mất lịch sử điểm. Trong học vụ, điểm là dữ liệu phải giữ. Vì vậy nhóm em dùng RESTRICT ở các mối quan hệ học vụ quan trọng, và chỉ CASCADE ở các bảng phụ thuộc thật sự.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao vẫn cần procedure kiểm tra \code{Grade} nếu FK đã RESTRICT?''
+\begin{loi}
+Để trả lỗi thân thiện và để chủ động kiểm tra trước khi xóa. FK RESTRICT sẽ chặn, nhưng thông báo là lỗi khóa ngoại chung. Procedure \code{sp_DeleteEnrollment} đếm \code{Grade} trước, báo ``không thể xóa vì còn điểm'', rồi mới quyết định. Đây là defense in depth: CSDL vẫn là chốt cuối, procedure lo phần trải nghiệm.
+\end{loi}
+
+\subsection{CHECK trong MySQL 8}
+
+\cue{NÓI}
+\begin{loi}
+MySQL 8.0.16 trở đi mới thực thi CHECK; trước đó nó chỉ parse rồi bỏ qua. Nhóm em dùng MySQL 8 nên CHECK có hiệu lực thật. Ví dụ:
+
+\begin{itemize}
+    \item \code{CHECK (Capacity > 0)}: sĩ số phải dương.
+    \item \code{CHECK (StartDate < EndDate)}: học kỳ không kết thúc trước khi bắt đầu.
+    \item \code{CHECK (TermNo BETWEEN 1 AND 3)}: học kỳ chỉ có 1, 2, 3.
+    \item \code{CHECK (AcademicYear REGEXP '^[0-9]{4}-[0-9]{4}$')}: năm học đúng dạng \code{2026-2027}.
+    \item \code{CHECK (Score >= 0 AND Score <= MaxScore)}: điểm không âm và không vượt điểm tối đa.
+\end{itemize}
+
+CHECK chỉ nhìn \textbf{một hàng}. Nó không được dùng subquery, không đọc bảng khác. Vì vậy nó rất hợp cho miền giá trị, nhưng không đủ cho luật ``trùng lịch'' hay ``vượt sĩ số''.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không dùng ENUM cho trạng thái?''
+\begin{loi}
+ENUM lưu gọn và kiểm tra nhanh, nhưng thêm một trạng thái mới là phải \code{ALTER TABLE}, và thứ tự ENUM có thể gây lỗi khi so sánh. Nhóm em dùng \code{VARCHAR} + \code{CHECK IN (...)} để danh sách giá trị hiện ngay trong schema, dễ đọc, dễ mở rộng hơn. Đổi lại tốn vài byte mỗi dòng; với đồ án, điều đó không đáng kể.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``CHECK email bằng LIKE có đủ không?''
+\begin{loi}
+Không đủ để kiểm tra email theo chuẩn RFC, và nhóm em không tuyên bố điều đó. CHECK chỉ chặn các dạng rõ ràng sai, ví dụ thiếu \code{@} hoặc thiếu dấu chấm. Kiểm tra đầy đủ nên làm ở ứng dụng hoặc dùng regex mạnh hơn; CSDL giữ vai trò chặn dữ liệu rác cơ bản. Đây là giới hạn có ý thức, không phải sót.
+\end{loi}
+
+% =====================================================================
+\section{Trigger: khi nào dùng và vì sao không dùng CHECK}
+% =====================================================================
+
+\cue{NÓI}
+\begin{loi}
+Trigger là thủ tục chạy tự động khi có INSERT, UPDATE hoặc DELETE. Nhóm em dùng trigger cho các luật \textbf{liên hàng} hoặc \textbf{liên bảng}:
+
+\begin{itemize}
+    \item Một giảng viên không dạy hai lớp trùng giờ trong cùng học kỳ.
+    \item Một phòng không bị xếp hai lớp trùng giờ.
+    \item Sĩ số lớp không vượt \code{Capacity}.
+    \item Sinh viên chỉ nộp bài khi đã ghi danh ACTIVE, đúng thời gian, đúng số lần.
+    \item Điểm chỉ được nhập cho bài thuộc lớp mà sinh viên đã ghi danh, và không vượt điểm tối đa.
+    \item Phản hồi chỉ trả lời phản hồi trong cùng bài nộp.
+    \item \code{SubmissionCount} tự cập nhật khi thêm/xóa/sửa bài nộp.
+\end{itemize}
+
+Những luật này không thể viết bằng CHECK vì CHECK không thấy hàng khác. Nếu chỉ kiểm tra ở ứng dụng, người dùng SQL trực tiếp hoặc một script import có thể bỏ qua. Trigger là chốt cuối ở tầng dữ liệu.
+\end{loi}
+
+\begin{longtable}{p{5.1cm}p{2.1cm}p{5.9cm}}
+\caption{13 trigger và luật tương ứng}\\
+\toprule
+\textbf{Trigger} & \textbf{Thời điểm} & \textbf{Luật} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Trigger} & \textbf{Thời điểm} & \textbf{Luật} \\
+\midrule
+\endhead
+\code{trg_section_schedule_bi} & BEFORE INSERT & Chặn trùng lịch giảng viên/phòng khi thêm lớp. \\
+\code{trg_section_schedule_bu} & BEFORE UPDATE & Chặn trùng lịch khi sửa lớp; bỏ qua chính nó. \\
+\code{trg_submission_count_ai} & AFTER INSERT & Tính lại \code{SubmissionCount} của bài tập. \\
+\code{trg_submission_count_ad} & AFTER DELETE & Tính lại \code{SubmissionCount}. \\
+\code{trg_submission_count_au} & AFTER UPDATE & Nếu đổi bài tập, trừ bài cũ và cộng bài mới. \\
+\code{trg_enrollment_capacity_bi} & BEFORE INSERT & Chặn ghi danh vượt sĩ số khi thêm. \\
+\code{trg_enrollment_capacity_bu} & BEFORE UPDATE & Chặn vượt sĩ số khi đổi lớp/trạng thái. \\
+\code{trg_submission_validate_bi} & BEFORE INSERT & Kiểm tra bài tập, ghi danh, thời gian, số lần, điểm. \\
+\code{trg_submission_validate_bu} & BEFORE UPDATE & Kiểm tra lại khi sửa bài nộp. \\
+\code{trg_grade_validate_bi} & BEFORE INSERT & Điểm phải thuộc lớp đã ghi danh, không vượt max. \\
+\code{trg_grade_validate_bu} & BEFORE UPDATE & Kiểm tra lại khi sửa điểm. \\
+\code{trg_feedback_validate_bi} & BEFORE INSERT & Phản hồi cha phải cùng bài nộp. \\
+\code{trg_feedback_validate_bu} & BEFORE UPDATE & Không tự làm cha của chính mình; cùng bài nộp. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Trigger trùng lịch: công thức chồng lấn}
+
+\cue{LÀM}
+Mở file \code{database/triggers/05_triggers.sql}, kéo đến \code{trg_section_schedule_bi}.
+
+\cue{NÓI}
+\begin{loi}
+Đây là trigger khó nhất và cũng dễ bị hỏi nhất. Nhóm em kiểm tra hai thứ: giảng viên và phòng. Với giảng viên, điều kiện là:
+
+\begin{lstlisting}[style=sql]
+NEW.StartTime < cs.EndTime
+AND cs.StartTime < NEW.EndTime
+\end{lstlisting}
+
+Đây là công thức \textbf{hai khoảng chồng lấn}. Em không dùng \code{BETWEEN} vì \code{BETWEEN} chỉ kiểm tra một điểm nằm trong khoảng; nó bỏ sót trường hợp lớp mới bao trùm lớp cũ, hoặc hai lớp cắt nhau một phần. Công thức đúng là: thời gian bắt đầu của lớp mới nhỏ hơn thời gian kết thúc của lớp cũ, \emph{và} thời gian bắt đầu của lớp cũ nhỏ hơn thời gian kết thúc của lớp mới.
+
+Em cũng phải lọc \code{SemesterID} và \code{DayOfWeek}. Cùng giờ nhưng khác ngày hoặc khác học kỳ thì không trùng. Và khi UPDATE, em thêm \code{cs.SectionID <> OLD.SectionID} để không tự so với chính nó.
+\end{loi}
+
+\begin{lstlisting}[style=sql]
+CREATE TRIGGER trg_section_schedule_bi
+BEFORE INSERT ON CourseSection
+FOR EACH ROW
+BEGIN
+  DECLARE v_conflict INT DEFAULT 0;
+
+  IF NEW.PrimaryInstructorID IS NOT NULL THEN
+    SELECT COUNT(*) INTO v_conflict
+    FROM CourseSection cs
+    WHERE cs.SemesterID = NEW.SemesterID
+      AND cs.PrimaryInstructorID = NEW.PrimaryInstructorID
+      AND cs.DayOfWeek = NEW.DayOfWeek
+      AND NEW.StartTime < cs.EndTime
+      AND cs.StartTime < NEW.EndTime;
+
+    IF v_conflict > 0 THEN
+      SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Trung lich giang vien trong cung hoc ky.';
+    END IF;
+  END IF;
+
+  -- sau do kiem tra tuong tu cho RoomCode
+END;
+\end{lstlisting}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao dùng \code{BEFORE INSERT} mà không \code{AFTER INSERT}?''
+\begin{loi}
+Vì đây là kiểm tra hợp lệ trước khi ghi. \code{BEFORE} cho phép chặn dòng trước khi nó vào bảng; nếu \code{SIGNAL}, câu INSERT bị hủy. Nếu dùng \code{AFTER}, dòng đã nằm trong bảng rồi mới phát hiện trùng, phải xóa bù hoặc rollback, phức tạp và dễ lộ dữ liệu trung gian. Nguyên tắc của nhóm em: \textbf{validation dùng BEFORE, derived value dùng AFTER}.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Nếu hai lớp trùng giờ nhưng khác phòng, khác giảng viên thì sao?''
+\begin{loi}
+Không sao. Trigger chỉ chặn khi cùng giảng viên hoặc cùng phòng. Hai lớp khác phòng, khác giảng viên có thể cùng giờ; đó là bình thường. Nhóm em kiểm tra hai chiều độc lập: một chiều cho \code{PrimaryInstructorID}, một chiều cho \code{RoomCode}.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao không dùng UNIQUE trên \code{(SemesterID, DayOfWeek, StartTime, RoomCode)}?''
+\begin{loi}
+UNIQUE chỉ chặn trùng chính xác cùng thời điểm bắt đầu. Nó không chặn lớp 8:30--10:00 với lớp 9:00--10:30, vì \code{StartTime} khác nhau. Bài toán là chồng lấn khoảng, không phải bằng nhau. Đây là lý do kinh điển phải dùng trigger hoặc exclusion constraint; MySQL không có exclusion constraint như PostgreSQL, nên trigger là lựa chọn phù hợp.
+\end{loi}
+
+\subsection{Trigger SubmissionCount: AFTER và OLD/NEW}
+
+\cue{NÓI}
+\begin{loi}
+Ba trigger đếm bài nộp là ví dụ rõ nhất cho \code{AFTER} và \code{OLD/NEW}.
+
+Khi \textbf{thêm} một \code{Submission}, trigger \code{AFTER INSERT} chạy sau khi dòng đã vào bảng. Lúc đó \code{COUNT(*)} mới thấy dòng mới. Nếu dùng \code{BEFORE INSERT}, count chưa thấy dòng mới, nên \code{SubmissionCount} sẽ thiếu một. Vì vậy phải là \code{AFTER}.
+
+Khi \textbf{xóa}, dòng đã mất; trigger \code{AFTER DELETE} dùng \code{OLD.AssignmentID} để biết bài nào cần giảm.
+
+Khi \textbf{sửa}, có hai trường hợp. Nếu \code{AssignmentID} không đổi, chỉ cần tính lại bài cũ. Nếu \code{AssignmentID} đổi, phải trừ bài cũ và cộng bài mới. Trigger \code{AFTER UPDATE} xử lý cả hai bằng \code{OLD} và \code{NEW}.
+\end{loi}
+
+\begin{lstlisting}[style=sql]
+CREATE TRIGGER trg_submission_count_ai
+AFTER INSERT ON Submission
+FOR EACH ROW
+BEGIN
+  UPDATE Assignment
+     SET SubmissionCount = (
+       SELECT COUNT(*) FROM Submission
+        WHERE AssignmentID = NEW.AssignmentID
+     )
+   WHERE AssessmentID = NEW.AssignmentID;
+END;
+
+CREATE TRIGGER trg_submission_count_ad
+AFTER DELETE ON Submission
+FOR EACH ROW
+BEGIN
+  UPDATE Assignment
+     SET SubmissionCount = (
+       SELECT COUNT(*) FROM Submission
+        WHERE AssignmentID = OLD.AssignmentID
+     )
+   WHERE AssessmentID = OLD.AssignmentID;
+END;
+
+CREATE TRIGGER trg_submission_count_au
+AFTER UPDATE ON Submission
+FOR EACH ROW
+BEGIN
+  UPDATE Assignment
+     SET SubmissionCount = (
+       SELECT COUNT(*) FROM Submission
+        WHERE AssignmentID = OLD.AssignmentID
+     )
+   WHERE AssessmentID = OLD.AssignmentID;
+
+  IF NEW.AssignmentID <> OLD.AssignmentID THEN
+    UPDATE Assignment
+       SET SubmissionCount = (
+         SELECT COUNT(*) FROM Submission
+          WHERE AssignmentID = NEW.AssignmentID
+       )
+     WHERE AssessmentID = NEW.AssignmentID;
+  END IF;
+END;
+\end{lstlisting}
+
+\cue{NẾU THẦY HỎI}
+``\code{SubmissionCount} đếm bài nộp hay đếm sinh viên?''
+\begin{loi}
+Đếm \textbf{số dòng bài nộp}, tức số attempt. Một sinh viên nộp lại lần 2 thì count tăng thêm 1. Đây là chủ ý: cột này phục vụ hiển thị ``có bao nhiêu lượt nộp''. Còn tỷ lệ hoàn thành thì function \code{fn_CalculateAssignmentCompletionRate} đếm \code{COUNT(DISTINCT StudentID)} trên các bài \code{SUBMITTED}, nên đó là số sinh viên, không phải số attempt. Hai con số khác nhau vì mục đích khác nhau.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Nếu xóa bài tập thì sao?''
+\begin{loi}
+\code{Submission} có khóa ngoại \code{AssignmentID} với chính sách CASCADE. Khi xóa assignment, các submission con bị xóa theo, và trigger \code{AFTER DELETE} chạy cho từng dòng để giảm count. Tuy nhiên trong thực tế nhóm em hạn chế xóa assignment đã có bài nộp; nếu cần thì dùng trạng thái ẩn thay vì xóa cứng.
+\end{loi}
+
+\subsection{Trigger sĩ số: vì sao vừa có trigger vừa có procedure?}
+
+\cue{NÓI}
+\begin{loi}
+Trigger sĩ số \code{trg_enrollment_capacity_bi} chạy trước khi thêm ghi danh. Nó đọc \code{Capacity} và \code{SectionStatus} của lớp. Nếu lớp \code{CLOSED} hoặc \code{CANCELLED}, nó chặn. Nếu trạng thái ghi danh là \code{ACTIVE}, nó đếm số ghi danh ACTIVE hiện có; nếu đã bằng sĩ số thì báo đầy.
+
+Khi UPDATE, trigger \code{trg_enrollment_capacity_bu} làm tương tự nhưng loại trừ chính dòng đang sửa bằng \code{EnrollmentID <> OLD.EnrollmentID}. Nếu không loại trừ, một ghi danh đang ACTIVE chỉ cần đổi trạng thái sẽ tự đếm chính nó và bị báo đầy sai.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Đã có trigger rồi, sao procedure còn kiểm tra sĩ số?''
+\begin{loi}
+Vì trigger và procedure giải hai bài toán khác nhau. Trigger bảo vệ \textbf{tính đúng} của dữ liệu: dù ai INSERT trực tiếp, luật vẫn chạy. Procedure bảo vệ \textbf{tính nguyên tử và tương tranh}: nó khóa dòng lớp bằng \code{SELECT ... FOR UPDATE}, rồi mới đếm và ghi. Nếu chỉ có trigger, hai transaction đồng thời có thể cùng đọc ``còn 1 chỗ'' và cùng insert; trigger không tự khóa dòng lớp. Procedure là đường ghi chính, nên nhóm em đặt khóa ở đó. Đây là defense in depth, không phải làm trùng vô ích.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vậy trigger sĩ số có phải là điểm yếu không?''
+\begin{loi}
+Nó là lớp bảo vệ cuối, không phải cơ chế chống race duy nhất. Với ghi trực tiếp không qua procedure, vẫn có khe hở tương tranh; nhóm em ghi rõ trong hạn chế. Nếu cần chặt hơn, có thể thêm khóa trong trigger hoặc dùng unique/queue, nhưng như vậy tăng độ phức tạp. Với đồ án, cách làm là: mọi ghi danh đi qua procedure; trigger giữ cho dữ liệu không bị sai khi có thao tác ngoài luồng.
+\end{loi}
+
+\subsection{Trigger kiểm tra bài nộp: một trigger, nhiều luật}
+
+\cue{NÓI}
+\begin{loi}
+\code{trg_submission_validate_bi} là trigger dài nhất. Nó kiểm tra sáu thứ trước khi cho một bài nộp vào bảng:
+
+\begin{enumerate}
+    \item \code{AssignmentID} có tồn tại không.
+    \item Sinh viên có ghi danh \code{ACTIVE} trong lớp của bài tập không.
+    \item \code{SubmittedAt} có trước \code{OpenDate} không.
+    \item Nếu sau \code{DueDate} thì bài tập có cho nộp muộn không.
+    \item \code{AttemptNo} có vượt \code{MaxAttempts} không.
+    \item Nếu có điểm, điểm có vượt \code{MaxScore} không; nếu có người chấm, người đó có phải giảng viên phụ trách chính không.
+\end{enumerate}
+
+Sáu luật này liên quan đến ít nhất bốn bảng: \code{Submission}, \code{Assignment}, \code{Assessment}, \code{Enrollment}, \code{CourseSection}. CHECK không thể làm vì CHECK không đọc bảng khác. Đây là lý do trigger tồn tại.
+\end{loi}
+
+\begin{lstlisting}[style=sql]
+IF NOT EXISTS (
+  SELECT 1 FROM Enrollment
+   WHERE StudentID = NEW.StudentID
+     AND SectionID = v_section_id
+     AND EnrollmentStatus = 'ACTIVE'
+) THEN
+  SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Sinh vien chua ghi danh ACTIVE trong lop cua bai tap.';
+END IF;
+
+IF NEW.SubmittedAt < v_open_date THEN
+  SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Khong duoc nop bai truoc thoi diem mo.';
+END IF;
+
+IF NEW.SubmittedAt > v_due_date AND v_allow_late = FALSE THEN
+  SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Bai tap khong cho phep nop muon.';
+END IF;
+\end{lstlisting}
+
+\cue{NẾU THẦY HỎI}
+``Sao không kiểm tra ở Flask?'' 
+\begin{loi}
+Flask có kiểm tra để trả lỗi sớm và thân thiện, nhưng Flask không phải chốt cuối. Nếu có script import, công cụ SQL, hoặc một API khác ghi trực tiếp, luật sẽ bị bỏ qua. Nhóm em đặt luật ở CSDL để \textbf{mọi con đường ghi} đều đi qua cùng một luật. Đây là nguyên tắc ``database as the source of truth''.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Nếu bài tập cho nộp muộn thì sao?''
+\begin{loi}
+Trigger chỉ chặn khi \code{AllowLateSubmission = FALSE}. Nếu \code{TRUE}, bài nộp sau hạn vẫn được phép; ứng dụng có thể gắn cờ muộn hoặc trừ điểm theo quy định. Việc trừ điểm là nghiệp vụ đánh giá, không phải ràng buộc toàn vẹn, nên nhóm em không ép trong trigger.
+\end{loi}
+
+\subsection{Trigger điểm và phản hồi}
+
+\cue{NÓI}
+\begin{loi}
+Trigger điểm \code{trg_grade_validate_bi} kiểm tra ba thứ: ghi danh và bài đánh giá phải cùng một lớp; không ghi điểm cho ghi danh đã \code{DROPPED}; điểm không vượt \code{MaxScore}; và người chấm phải là giảng viên phụ trách chính. Nếu sai, \code{SIGNAL} và câu INSERT bị hủy.
+
+Trigger phản hồi \code{trg_feedback_validate_bi} kiểm tra người phản hồi phải là sinh viên đã nộp bài hoặc giảng viên phụ trách. Nếu có \code{ParentFeedbackID}, phản hồi cha phải cùng \code{SubmissionID}. Khi UPDATE, trigger còn chặn \code{ParentFeedbackID = FeedbackID}, tức không được tự trả lời chính mình. Khi INSERT thì không cần kiểm tra tự tham chiếu, vì \code{FeedbackID} là AUTO\_INCREMENT và chưa biết trước.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không dùng CHECK cho \code{Score <= MaxScore}?''
+\begin{loi}
+Vì \code{MaxScore} nằm ở bảng \code{Assessment}, còn \code{Score} nằm ở \code{Grade} hoặc \code{Submission}. CHECK trong MySQL không được dùng subquery để đọc bảng khác. Nếu muốn CHECK, phải lặp \code{MaxScore} vào từng bảng, gây dư thừa và lệch khi sửa. Trigger đọc bảng gốc, đúng hơn.
+\end{loi}
+
+\subsection{Năm câu hỏi trigger hay gặp}
+
+\qa{Trigger có làm chậm không?}
+Trigger row-level chạy một lần cho mỗi dòng bị tác động. Với INSERT/UPDATE một dòng, chi phí rất nhỏ. Với batch lớn, chi phí tăng tuyến tính; khi đó nên dùng thao tác tập hợp hoặc tắt trigger có kiểm soát khi import. Nhóm em ưu tiên đúng dữ liệu; với quy mô đồ án, chi phí chấp nhận được. Các cột join trong trigger đều có index hỗ trợ.
+
+\qa{Vì sao dùng \code{SIGNAL SQLSTATE '45000'}?}
+\code{45000} là SQLSTATE do người dùng định nghĩa. MySQL đổi nó thành lỗi 1644. \code{SIGNAL} làm câu lệnh hiện tại thất bại và rollback theo transaction. Ứng dụng bắt mã 1644 và trả HTTP 400 kèm thông báo. Nếu chỉ \code{SELECT} một cờ lỗi, câu INSERT vẫn có thể tiếp tục, không an toàn.
+
+\qa{Vì sao \code{FOR EACH ROW}?}
+Đây là trigger theo từng dòng, cần \code{NEW}/\code{OLD}. MySQL không có statement-level trigger như PostgreSQL. Với câu INSERT nhiều dòng, trigger chạy lần lượt từng dòng; nếu một dòng vi phạm, câu lệnh thất bại và InnoDB rollback phần đã làm trong câu lệnh.
+
+\qa{Trigger có gọi procedure không?}
+Có thể, nhưng nhóm em không làm vậy. Trigger nên ngắn, dễ đọc, tránh gọi procedure trả result set hoặc dynamic SQL. Nếu trigger gọi procedure phức tạp, khi lỗi rất khó truy vết và dễ tạo phụ thuộc vòng. Nhóm em giữ trigger chỉ gồm kiểm tra và cập nhật trực tiếp.
+
+\qa{Sao không dùng trigger cho mọi thứ?}
+Vì trigger là logic ẩn. Người đọc schema không thấy nó nếu không mở file trigger; debug khó; thứ tự trigger khó kiểm soát; và một số luật cần transaction nhiều bước, thông báo thân thiện, hoặc khóa. Nhóm em chỉ dùng trigger cho luật \emph{liên hàng} mà CHECK không làm được; các luồng CRUD phức tạp để procedure.
+
+% =====================================================================
+\section{Procedure: transaction, khóa và thông báo lỗi}
+% =====================================================================
+
+\cue{NÓI}
+\begin{loi}
+Procedure là nơi nhóm em đặt các thao tác \textbf{nhiều bước}. Khác với trigger chạy tự động, procedure được gọi tường minh từ API. Nhóm em có năm procedure: ba procedure CRUD cho \code{Enrollment}, và hai procedure truy vấn cho màn hình ghi danh và thống kê.
+
+Vì sao phải dùng procedure? Vì một thao tác ghi danh không chỉ là một câu INSERT. Nó phải kiểm tra sinh viên còn hoạt động, lớp còn mở, không trùng, không vượt sĩ số; phải khóa dòng lớp; phải commit hoặc rollback; và phải trả về ID vừa tạo. Nếu để ứng dụng tự làm, logic nằm rải rác và dễ bị bỏ qua bởi một client khác.
+\end{loi}
+
+\begin{longtable}{p{5.0cm}p{3.1cm}p{5.6cm}}
+\caption{Năm procedure và trách nhiệm}\\
+\toprule
+\textbf{Procedure} & \textbf{Loại} & \textbf{Trách nhiệm} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Procedure} & \textbf{Loại} & \textbf{Trách nhiệm} \\
+\midrule
+\endhead
+\code{sp_InsertEnrollment} & Ghi & Kiểm tra sinh viên/lớp/trùng/sĩ số; khóa lớp; insert; trả ID. \\
+\code{sp_UpdateEnrollment} & Ghi & Đổi lớp/trạng thái; chặn đổi lớp khi đã có điểm; kiểm tra sĩ số. \\
+\code{sp_DeleteEnrollment} & Ghi & Chỉ xóa khi chưa có điểm; giữ lịch sử học tập. \\
+\code{sp_GetStudentEnrollments} & Đọc & Lọc theo sinh viên/học kỳ/trạng thái; phân trang. \\
+\code{sp_GetAssignmentStatistics} & Đọc & Thống kê bài tập: đủ điều kiện, đã nộp, thiếu, tỷ lệ. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Procedure sp\_InsertEnrollment: đi từng bước}
+
+\cue{LÀM}
+Mở \code{database/procedures/06_procedures.sql}, chỉ vào phần \code{sp_InsertEnrollment}.
+
+\cue{NÓI}
+\begin{loi}
+Procedure này có mười bước, nhưng em nhóm thành bốn cụm.
+
+\textbf{Cụm 1 --- kiểm tra tham số.} Nếu \code{StudentID} hoặc \code{SectionID} NULL/âm, báo lỗi ngay. Trạng thái mặc định là \code{ACTIVE}; nếu khác \code{ACTIVE}, \code{DROPPED}, \code{COMPLETED} thì báo lỗi. Các kiểm tra này không cần transaction vì chỉ là giá trị đầu vào.
+
+\textbf{Cụm 2 --- mở transaction và kiểm tra dữ liệu.} \code{START TRANSACTION} đánh dấu điểm bắt đầu. Procedure kiểm tra sinh viên tồn tại và tài khoản \code{ACTIVE}; kiểm tra lớp tồn tại; rồi \code{SELECT Capacity, SectionStatus ... FOR UPDATE} để khóa dòng lớp. Khóa này rất quan trọng: nó ngăn hai transaction cùng đọc sĩ số và cùng insert.
+
+\textbf{Cụm 3 --- kiểm tra nghiệp vụ.} Lớp phải \code{OPEN}; sinh viên chưa có ghi danh trong lớp; nếu trạng thái \code{ACTIVE} thì đếm số ACTIVE hiện có và so với \code{Capacity}. Nếu đủ thì báo lỗi.
+
+\textbf{Cụm 4 --- ghi và trả kết quả.} INSERT, lấy \code{LAST_INSERT_ID()}, \code{COMMIT}, rồi \code{SELECT 1 AS success, ...} để API đọc kết quả. Nếu bất kỳ lỗi SQL nào, \code{EXIT HANDLER} bắt, \code{ROLLBACK}, và \code{RESIGNAL} để lỗi gốc lên API.
+\end{loi}
+
+\begin{lstlisting}[style=sql]
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+  ROLLBACK;
+  RESIGNAL;
+END;
+
+START TRANSACTION;
+
+SELECT Capacity, SectionStatus
+  INTO v_capacity, v_section_status
+  FROM CourseSection
+ WHERE SectionID = p_section_id
+ FOR UPDATE;
+
+-- kiem tra trang thai, trung, si so ...
+INSERT INTO Enrollment
+  (StudentID, SectionID, EnrollmentDate, EnrollmentStatus)
+VALUES
+  (p_student_id, p_section_id, CURRENT_TIMESTAMP, v_status);
+
+SET v_new_id = LAST_INSERT_ID();
+COMMIT;
+\end{lstlisting}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao \code{START TRANSACTION} không đặt ngay đầu procedure?''
+\begin{loi}
+Vì các kiểm tra tham số đầu vào không đọc/ghi bảng, không cần transaction. Đặt sau các kiểm tra đó giúp transaction ngắn hơn, giảm thời gian giữ khóa. Nguyên tắc là: mở transaction càng muộn càng tốt, nhưng phải trước thao tác đọc dữ liệu cần nhất quán đầu tiên.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``\code{FOR UPDATE} là gì?'' 
+\begin{loi}
+Đó là khóa ghi bi quan trên các dòng được chọn. Trong transaction, dòng \code{CourseSection} bị khóa đến khi \code{COMMIT} hoặc \code{ROLLBACK}. Transaction khác muốn khóa cùng dòng phải chờ. Nhờ vậy, sau khi em đếm sĩ số và trước khi em insert, không ai chen vào làm thay đổi số lượng. Đây là cách chống oversell kinh điển.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao không dùng \code{LOCK IN SHARE MODE}?'' 
+\begin{loi}
+\code{LOCK IN SHARE MODE} là khóa đọc chia sẻ: nhiều transaction có thể cùng giữ, nên hai transaction vẫn cùng đọc ``còn chỗ'' và cùng insert. \code{FOR UPDATE} là khóa độc quyền, chỉ một transaction giữ; transaction sau phải chờ. Vì mục tiêu là ngăn ghi đồng thời, phải dùng khóa độc quyền.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Nếu \code{INSERT} lỗi thì sao?''
+\begin{loi}
+\code{EXIT HANDLER FOR SQLEXCEPTION} bắt lỗi, chạy \code{ROLLBACK} để hủy transaction, rồi \code{RESIGNAL} để giữ nguyên mã lỗi và thông điệp gốc. Nếu không \code{RESIGNAL}, API chỉ thấy một lỗi chung, mất thông tin. Nếu không \code{ROLLBACK}, transaction có thể còn treo khóa. Đây là mẫu xử lý lỗi chuẩn của nhóm em.
+\end{loi}
+
+\subsection{Update và delete: bảo vệ lịch sử học tập}
+
+\cue{NÓI}
+\begin{loi}
+\code{sp_UpdateEnrollment} không cho đổi \code{StudentID}; chỉ cho đổi lớp hoặc trạng thái. Trước khi đổi lớp, nó kiểm tra ghi danh đã có điểm chưa. Nếu đã có điểm, không cho chuyển lớp, vì điểm đang gắn với lớp cũ; chuyển lớp sẽ làm điểm treo sang lớp mới, sai bảng điểm. Nếu trạng thái mới là \code{DROPPED} mà đã có điểm, cũng chặn, để không xóa dấu lịch sử.
+
+\code{sp_DeleteEnrollment} là hard delete có điều kiện. Nó đếm \code{Grade} theo \code{EnrollmentID} và khóa các dòng điểm bằng \code{FOR UPDATE}. Nếu có điểm, báo lỗi và giữ ghi danh. Nếu không có, mới xóa. Nhóm em chọn hard delete cho dữ liệu chưa phát sinh điểm, và giữ lịch sử cho dữ liệu đã có điểm.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không xóa mềm mọi thứ bằng cột \code{IsDeleted}?'' 
+\begin{loi}
+Xóa mềm là lựa chọn tốt cho hệ thống thật, nhưng nó làm mọi truy vấn phải lọc \code{IsDeleted = 0}, và unique key có thể bị vướng. Với đồ án, nhóm em dùng trạng thái \code{DROPPED} cho ghi danh còn lịch sử, và hard delete chỉ khi chưa có điểm. Cách này đơn giản, đúng nghiệp vụ, và tránh làm phình dữ liệu rác.
+\end{loi}
+
+\subsection{Hai procedure truy vấn}
+
+\cue{NÓI}
+\begin{loi}
+\code{sp_GetStudentEnrollments} nhận năm tham số: sinh viên, học kỳ, trạng thái, giới hạn, offset. Các tham số lọc được phép NULL; điều kiện viết dạng \code{(p_student_id IS NULL OR e.StudentID = p_student_id)}. Nhờ vậy một procedure phục vụ nhiều màn hình: xem tất cả, xem theo sinh viên, xem theo học kỳ. \code{LIMIT/OFFSET} được kiểm tra trong khoảng 1--500 và không âm để tránh truy vấn quá nặng.
+
+\code{sp_GetAssignmentStatistics} thống kê theo lớp và học kỳ. Điểm khó là tránh nhân bản dòng khi join. Nhóm em dùng \code{COUNT(DISTINCT e.StudentID)} cho số sinh viên đủ điều kiện và \code{COUNT(DISTINCT s.StudentID)} cho số sinh viên đã nộp. Nếu dùng \code{COUNT(*)} sau khi join, một sinh viên nộp nhiều lần sẽ bị đếm nhiều lần. Tỷ lệ hoàn thành là hiệu và chia, có \code{CASE} tránh chia cho 0.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao dùng \code{LEFT JOIN}?''
+\begin{loi}
+Để giữ cả bài tập chưa có ai nộp. Nếu dùng \code{INNER JOIN}, bài tập có 0 bài nộp sẽ biến mất khỏi báo cáo; đó là sai nghiệp vụ. \code{LEFT JOIN} giữ bài tập, các cột submission thành NULL, và \code{COUNT(s.SubmissionID)} trả 0.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao dùng \code{HAVING} mà không \code{WHERE}?''
+\begin{loi}
+Vì điều kiện lọc là \code{COUNT(s.SubmissionID)}, một hàm tổng hợp. \code{WHERE} chạy trước khi nhóm, chưa có kết quả COUNT; \code{HAVING} chạy sau khi nhóm. Đây là lỗi kinh điển nếu đặt sai.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không dùng view cho các truy vấn này?''
+\begin{loi}
+View phù hợp khi muốn che giấu cấu trúc hoặc tái sử dụng một câu SELECT cố định. Ở đây truy vấn có tham số lọc động và phân trang, nên procedure linh hoạt hơn. View vẫn có thể dùng, nhưng không giải quyết tham số hóa. Nhóm em chọn procedure vì rubric yêu cầu và vì API gọi một lần.
+\end{loi}
+
+% =====================================================================
+\section{Function: cursor, IF/LOOP và tính toán}
+% =====================================================================
+
+\cue{NÓI}
+\begin{loi}
+Function khác procedure ở chỗ nó \textbf{trả về một giá trị} và thường được dùng ngay trong câu SELECT. Nhóm em có hai function, cả hai đều đáp ứng yêu cầu: có cursor, có IF/LOOP, có kiểm tra đầu vào, có truy vấn và tính toán.
+
+\code{fn_CalculateAssignmentCompletionRate} tính tỷ lệ hoàn thành của một bài tập. \code{fn_CalculateStudentAverageScore} tính điểm trung bình các bài đã công bố của một ghi danh. Cả hai trả \code{DECIMAL(5,2)}, tức tối đa 999.99, đủ cho phần trăm.
+\end{loi}
+
+\begin{longtable}{p{5.2cm}p{4.3cm}p{4.4cm}}
+\caption{Hai function và cách tính}\\
+\toprule
+\textbf{Function} & \textbf{Đầu vào} & \textbf{Cách tính} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Function} & \textbf{Đầu vào} & \textbf{Cách tính} \\
+\midrule
+\endhead
+\codebreak{fn\_\allowbreak Calculate\allowbreak Assignment\allowbreak CompletionRate} & \code{AssignmentID} & Duyệt sinh viên ACTIVE của lớp; đếm sinh viên có ít nhất một bài \code{SUBMITTED}; chia cho tổng; nhân 100. \\
+\codebreak{fn\_\allowbreak Calculate\allowbreak Student\allowbreak AverageScore} & \code{EnrollmentID} & Duyệt các \code{Grade} đã publish; đổi từng điểm sang phần trăm; lấy trung bình cộng. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Function fn\_CalculateAssignmentCompletionRate: cursor duyệt sinh viên}
+
+\cue{LÀM}
+Mở \code{database/functions/07_functions.sql}, chỉ vào function thứ nhất.
+
+\cue{NÓI}
+\begin{loi}
+Function này làm bốn bước.
+
+\textbf{Bước 1 --- kiểm tra đầu vào.} Nếu \code{AssignmentID} NULL hoặc không dương, \code{SIGNAL}. Sau đó tìm \code{SectionID} của bài tập. Nhóm em dùng \code{SELECT MAX(a.SectionID) INTO ...} vì mỗi assignment thuộc đúng một section; nếu không tìm thấy, biến là NULL và function báo lỗi.
+
+\textbf{Bước 2 --- mở cursor.} Cursor \code{cur_enrolled} lấy danh sách \code{StudentID} đang \code{ACTIVE} trong lớp. Đây là tập ``mẫu số'': tất cả sinh viên đủ điều kiện.
+
+\textbf{Bước 3 --- lặp.} Với mỗi sinh viên, function tăng \code{v_total}, rồi đếm xem sinh viên đó có ít nhất một \code{Submission} trạng thái \code{SUBMITTED} cho bài tập này không. Nếu có, tăng \code{v_submitted}. Đây là tử số, nhưng đếm theo \textbf{sinh viên}, không theo lượt nộp.
+
+\textbf{Bước 4 --- trả kết quả.} Nếu \code{v_total = 0}, trả \code{0.00} để tránh chia cho 0. Ngược lại, trả \code{ROUND(v_submitted * 100.0 / v_total, 2)}.
+\end{loi}
+
+\begin{lstlisting}[style=sql]
+DECLARE cur_enrolled CURSOR FOR
+  SELECT e.StudentID
+    FROM Enrollment e
+   WHERE e.SectionID = v_section_id
+     AND e.EnrollmentStatus = 'ACTIVE'
+   ORDER BY e.StudentID;
+
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = TRUE;
+
+OPEN cur_enrolled;
+
+enrollment_loop: LOOP
+  FETCH cur_enrolled INTO v_student_id;
+  IF v_done THEN
+    LEAVE enrollment_loop;
+  END IF;
+
+  SET v_total = v_total + 1;
+
+  SELECT COUNT(*) INTO v_has_submission
+    FROM Submission s
+   WHERE s.AssignmentID = p_assignment_id
+     AND s.StudentID = v_student_id
+     AND s.SubmissionStatus = 'SUBMITTED';
+
+  IF v_has_submission > 0 THEN
+    SET v_submitted = v_submitted + 1;
+  END IF;
+END LOOP;
+
+CLOSE cur_enrolled;
+\end{lstlisting}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao dùng con trỏ mà không dùng một câu SELECT GROUP BY?''
+\begin{loi}
+Vì rubric yêu cầu function có cursor và IF/LOOP, nên nhóm em chọn cách duyệt từng sinh viên để thể hiện đủ kỹ thuật. Về hiệu năng, cách set-based sẽ nhanh hơn: một câu \code{LEFT JOIN} và \code{COUNT(DISTINCT)} là xong. Nhóm em ý thức được đánh đổi này; với dữ liệu đồ án, số sinh viên mỗi lớp nhỏ nên chấp nhận được. Nếu làm production, em sẽ dùng set-based hoặc precompute.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``\code{CONTINUE HANDLER} hoạt động thế nào?''
+\begin{loi}
+Khi \code{FETCH} không còn dòng nào, MySQL phát \code{NOT FOUND}. Handler bắt và đặt \code{v_done = TRUE}, rồi cho chương trình tiếp tục. Ngay sau \code{FETCH}, vòng lặp kiểm tra \code{IF v_done} và \code{LEAVE} để thoát. Nếu dùng \code{EXIT HANDLER}, function sẽ thoát ngay tại lần fetch cuối, không chạy phần \code{CLOSE} và tính toán sau vòng lặp.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``\code{LEAVE enrollment_loop} là gì?''
+\begin{loi}
+Đó là thoát khỏi vòng lặp có nhãn \code{enrollment_loop}. Nhãn giúp phân biệt khi có nhiều vòng lặp lồng nhau. \code{LEAVE} giống \code{break} trong ngôn ngữ lập trình; nó không thoát function, chỉ thoát vòng lặp.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao phải \code{CLOSE} cursor?''
+\begin{loi}
+Cursor giữ tài nguyên và có thể giữ khóa/read view. \code{CLOSE} giải phóng cursor sau khi dùng. Nếu quên, trong function ngắn có thể không thấy lỗi ngay, nhưng đó là thói quen sai và có thể gây rò rỉ tài nguyên khi gọi nhiều lần.
+\end{loi}
+
+\subsection{Function fn\_CalculateStudentAverageScore: điểm trung bình có điều kiện}
+
+\cue{NÓI}
+\begin{loi}
+Function thứ hai nhận \code{EnrollmentID}. Nó kiểm tra ghi danh tồn tại, rồi mở cursor duyệt các \code{Grade} có \code{IsPublished = TRUE}. Với mỗi điểm, nó tính phần trăm \code{Score * 100.0 / MaxScore}, cộng vào tổng và tăng số lượng. Cuối cùng, nếu chưa có điểm nào thì trả \code{0.00}; nếu có, trả trung bình cộng.
+
+Điểm quan trọng: đây \textbf{không phải điểm chính thức của môn}. Nó là chỉ số phân tích nội bộ trên các điểm đã công bố. Công thức điểm chính thức của trường có thể có trọng số, điểm chuyên cần, thi cuối kỳ, làm tròn khác. Nhóm em ghi rõ điều này trong báo cáo để không overclaim.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao chỉ lấy \code{IsPublished = TRUE}?''
+\begin{loi}
+Vì điểm chưa công bố là điểm nháp, có thể thay đổi. Đưa vào trung bình sẽ làm sinh viên thấy một con số không chính thức. Chỉ điểm đã publish mới là dữ liệu đã chốt. Đây là quy tắc nghiệp vụ, không phải tối ưu kỹ thuật.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao khai báo \code{READS SQL DATA}?''
+\begin{loi}
+Vì function chỉ đọc, không ghi. MySQL dùng khai báo này để biết function không làm thay đổi dữ liệu; nó cũng cần thiết khi binary logging bật. Nhóm em không khai báo \code{DETERMINISTIC} vì kết quả phụ thuộc dữ liệu hiện tại, không phải cùng đầu vào luôn cho cùng đầu ra.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao trả \code{0.00} khi không có dữ liệu, thay vì \code{NULL}?''
+\begin{loi}
+Trả 0.00 giúp UI hiển thị nhất quán và tránh lỗi chia cho 0. Nhưng nó có thể gây hiểu nhầm là ``đã tính ra 0'' thay vì ``chưa có dữ liệu''. Nhóm em chấp nhận đánh đổi này vì màn hình thống kê cần một con số; nếu cần phân biệt, API có thể trả thêm cờ \code{has_data}. Đây là điểm có thể cải tiến.
+\end{loi}
+
+% =====================================================================
+\section{ Demo: 12--13 phút}
+% =====================================================================
+
+\cue{NÓI}
+\begin{loi}
+Phần demo em sẽ đi theo đúng thứ tự: chuẩn bị, đăng nhập ba vai trò, xem cấu trúc CSDL, CRUD ghi danh, trigger, procedure/function, kiểm thử. Mỗi thao tác em sẽ nói rõ nó chạm vào bảng nào và ai đang chặn lỗi.
+\end{loi}
+
+\subsection{Chuẩn bị trước khi thầy vào}
+
+\cue{LÀM}
+Mở hai terminal. Terminal 1 chạy MySQL (hoặc Docker container \code{hcmut-lms-mysql-test}). Terminal 2 chạy Flask:
+
+\begin{lstlisting}[style=shell]
+cd /home/nam/AI-Agent-Lab/hcmut-lms-btl2
+uv run python run.py
+\end{lstlisting}
+
+Mở trình duyệt tại \code{http://127.0.0.1:5000}. Kiểm tra nhanh:
+
+\begin{lstlisting}[style=shell]
+python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+Nếu database đã bị sửa nhiều trong lúc tập, em reset trước khi thầy vào. Lưu ý: \code{reset_database.sql} xóa database, chỉ dùng trước demo, không bấm giữa buổi.
+\end{loi}
+
+\begin{lstlisting}[style=shell]
+mysql -u root -p < database/reset_database.sql
+mysql -u root -p < database/run_all.sql
+\end{lstlisting}
+
+\cue{NẾU THẦY HỎI}
+``Vì sao phải reset?''
+\begin{loi}
+Vì demo CRUD và trigger sẽ thay đổi dữ liệu. Reset đưa về seed chuẩn để các con số như \code{SubmissionCount = 4, 2, 3, 3, 1, 0} và điểm 82.50\% khớp tài liệu. Nếu không reset, thầy có thể thấy số khác và tưởng mình nói sai.
+\end{loi}
+
+\subsection{Đăng nhập ba vai trò}
+
+\cue{LÀM}
+Ở màn hình đăng nhập, bấm ô \textbf{Sinh viên}; chọn tài khoản \textbf{2210001 --- Nguyễn Văn An} (UserID 101); bấm \textbf{Đăng nhập}. Sau đó bấm \textbf{Đăng xuất}; lặp lại với \textbf{Cán bộ} \textbf{TS. Nguyễn Minh Tâm} (201), rồi \textbf{Quản trị} \textbf{Nguyễn Quản Trị} (301).
+
+\cue{NÓI}
+\begin{loi}
+Bản demo không dùng mật khẩu; mục đích là cho thấy phân quyền theo vai trò. Sinh viên chỉ thấy khóa học, bài tập, điểm của mình. Cán bộ thấy lớp mình dạy. Quản trị thấy danh mục và ghi danh. Việc phân quyền API nằm ở Flask; CSDL vẫn là nơi lưu \code{Role} và trạng thái tài khoản. Nhóm em không tuyên bố đây là auth production; production cần CAS/OAuth, session, CSRF.
+\end{loi}
+
+\cue{CHỈ}
+Chỉ vào badge vai trò ở góc phải và menu tương ứng.
+
+\cue{NÓI}
+\begin{loi}
+Thầy để ý: cùng một cơ sở dữ liệu nhưng ba vai trò thấy ba menu khác nhau. Đây là kiểm soát truy cập ở tầng ứng dụng, không phải ba database khác nhau.
+\end{loi}
+
+\subsection{Xem cấu trúc CSDL}
+
+\cue{LÀM}
+Mở terminal MySQL:
+
+\begin{lstlisting}[style=shell]
+docker exec -it hcmut-lms-mysql-test mysql -uroot -proot hcmut_lms
+\end{lstlisting}
+
+Hoặc nếu MySQL chạy local:
+
+\begin{lstlisting}[style=shell]
+mysql -u root -p hcmut_lms
+\end{lstlisting}
+
+Trong MySQL, chạy:
+
+\begin{lstlisting}[style=sql]
+SHOW TABLES;
+SELECT COUNT(*) AS table_count
+FROM information_schema.tables
+WHERE table_schema = 'hcmut_lms';
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+Thầy thấy 22 bảng. Em không đọc hết tên; em chỉ nhóm theo năm miền như phần đầu. Điều quan trọng là bảng nào cũng có khóa chính, và các quan hệ đều có khóa ngoại.
+\end{loi}
+
+\cue{LÀM}
+Chạy:
+
+\begin{lstlisting}[style=sql]
+SHOW CREATE TABLE Enrollment\G
+\end{lstlisting}
+
+\cue{CHỈ}
+Chỉ vào \code{PRIMARY KEY}, \code{UNIQUE KEY uq_enrollment_student_section}, các \code{FOREIGN KEY}, và \code{CHECK}.
+
+\cue{NÓI}
+\begin{loi}
+Đây là bảng \code{Enrollment}. Thầy thấy ba tầng bảo vệ ngay trong một bảng: khóa chính \code{EnrollmentID}; unique kép \code{(StudentID, SectionID)} chặn trùng; khóa ngoại đến \code{Student} và \code{CourseSection}; và các CHECK trạng thái. Những gì kiểm tra được trong một hàng, em để ở đây. Những gì cần đọc bảng khác, em để trigger.
+\end{loi}
+
+\cue{LÀM}
+Chạy:
+
+\begin{lstlisting}[style=sql]
+SHOW TRIGGERS;
+SHOW PROCEDURE STATUS WHERE Db = 'hcmut_lms';
+SHOW FUNCTION STATUS WHERE Db = 'hcmut_lms';
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+MySQL liệt kê 13 trigger, 5 procedure, 2 function. Em không đọc từng dòng; em chỉ muốn thầy thấy chúng tồn tại trong CSDL, không phải hàm giả trong ứng dụng. Khi gọi API, Flask gọi đúng các object này.
+\end{loi}
+
+\subsection{CRUD ghi danh: thêm, trùng, sửa, xóa}
+
+\cue{LÀM}
+Đăng nhập lại bằng \textbf{Quản trị} 301. Vào menu \textbf{Quản trị}, chọn tab \textbf{Ghi danh}. Bấm nút \textbf{+ Thêm ghi danh}.
+
+\cue{NÓI}
+\begin{loi}
+Màn hình này gọi \code{GET /api/enrollments}; API gọi \code{sp_GetStudentEnrollments}. Bộ lọc sinh viên, học kỳ, trạng thái được truyền thẳng vào procedure. Thầy để ý dòng chữ nhỏ trên màn hình: ``Thêm/sửa/xóa gọi \code{sp_InsertEnrollment}, \code{sp_UpdateEnrollment}, \code{sp_DeleteEnrollment}''.
+\end{loi}
+
+\cue{LÀM}
+Trong hộp thoại thêm:
+\begin{enumerate}
+    \item Chọn sinh viên \code{2210007 --- Nguyen Gia Huy} (StudentID 107).
+    \item Chọn lớp \code{CO1001-L01 · 2026-2027 HK1}.
+    \item Trạng thái \code{ACTIVE}.
+    \item Bấm \textbf{Lưu}.
+\end{enumerate}
+
+\cue{NÓI}
+\begin{loi}
+Khi bấm Lưu, frontend gửi \code{POST /api/enrollments}. Backend không chạy câu INSERT trực tiếp; nó gọi \code{sp_InsertEnrollment}. Procedure kiểm tra sinh viên còn ACTIVE, lớp còn OPEN, chưa trùng, còn chỗ; khóa dòng lớp bằng \code{FOR UPDATE}; rồi mới insert. Nếu thành công, toast xanh và bảng tự tải lại.
+\end{loi}
+
+\cue{LÀM}
+Mở lại \textbf{+ Thêm ghi danh}; chọn sinh viên \textbf{2210001 --- Nguyễn Văn An} và cùng lớp \code{CO1001-L01}; bấm \textbf{Lưu}.
+
+\cue{NÓI}
+\begin{loi}
+Đây là lỗi cố ý. Procedure đếm thấy sinh viên đã có ghi danh trong lớp, \code{SIGNAL SQLSTATE '45000'} với thông điệp ``Sinh vien da co ghi danh trong lop nay.''. Backend bắt mã 1644, trả HTTP 400 với code \code{database_rule_violation}, và toast đỏ hiện đúng thông điệp. Lỗi không phải frontend đoán; nó đến từ CSDL.
+\end{loi}
+
+\cue{LÀM}
+Tìm ghi danh vừa thêm của \code{2210007}; bấm \textbf{Sửa}; đổi trạng thái sang \code{DROPPED}; bấm \textbf{Lưu}. Sau đó bấm \textbf{Xóa} và xác nhận.
+
+\cue{NÓI}
+\begin{loi}
+Sửa gọi \code{sp_UpdateEnrollment}; procedure không cho đổi \code{StudentID}, chỉ cho đổi lớp/trạng thái, và kiểm tra nếu đã có điểm thì không được chuyển lớp hoặc rút môn. Xóa gọi \code{sp_DeleteEnrollment}; vì ghi danh này chưa có điểm nên xóa được.
+
+Bây giờ em thử xóa một ghi danh đã có điểm: tìm ghi danh \#1 của Nguyễn Văn An trong \code{CO1001-L01}; bấm \textbf{Xóa}. Procedure đếm \code{Grade} và báo ``Khong the xoa ghi danh da co diem. Hay giu lich su hoc tap.''. Đây là bảo vệ lịch sử học tập, và khóa ngoại \code{RESTRICT} cũng là chốt cuối.
+\end{loi}
+
+\cue{CHỐT}
+``Cùng một thao tác xóa, nhưng dữ liệu chưa có điểm thì xóa được, dữ liệu đã có điểm thì bị chặn. Luật nằm ở procedure và FK, không nằm ở nút bấm.''
+
+\subsection{Trigger: chứng minh lỗi đến từ CSDL}
+
+\cue{LÀM}
+Trong MySQL client, chạy:
+
+\begin{lstlisting}[style=sql]
+SELECT AssessmentID, SubmissionCount
+FROM Assignment
+ORDER BY AssessmentID;
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+Seed có sáu assignment, số bài nộp lần lượt là 4, 2, 3, 3, 1, 0. Assignment 6 cố ý chưa có bài nộp để em demo trigger đếm.
+\end{loi}
+
+\cue{LÀM}
+Chạy file test:
+
+\begin{lstlisting}[style=sql]
+SOURCE database/tests/05_trigger_derived_submission_count.sql;
+\end{lstlisting}
+
+Nếu dùng Docker, chạy từ host:
+
+\begin{lstlisting}[style=shell]
+docker exec -i hcmut-lms-mysql-test mysql -uroot -proot hcmut_lms \
+  < database/tests/05_trigger_derived_submission_count.sql
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+File này chèn một bài nộp cho Assignment 6, sinh viên 105, rồi xem \code{SubmissionCount}. Kỳ vọng \code{CountAfterInsert = 1}. Sau đó nó xóa bài nộp và xem lại; kỳ vọng \code{CountAfterDelete = 0}. Không có dòng nào trong ứng dụng gán số này; ba trigger \code{AFTER INSERT/DELETE/UPDATE} tự tính lại bằng \code{COUNT(*)}.
+\end{loi}
+
+\cue{LÀM}
+Chạy test trùng lịch:
+
+\begin{lstlisting}[style=sql]
+SOURCE database/tests/04_trigger_expected_fail_schedule.sql;
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+Câu INSERT này cố ý tạo lớp \code{CONFLICT-TEST} cho giảng viên 201, trùng giờ với lớp đã có. Em mong đợi lỗi, không mong đợi thành công. Nếu thầy thấy MySQL báo lỗi 1644 với thông điệp trùng lịch giảng viên hoặc phòng, đó là trigger \code{trg_section_schedule_bi} đang chạy. Câu INSERT bị hủy, không có dòng rác.
+\end{loi}
+
+\cue{NẾU THẦY HỎI}
+``Sao không thấy dòng \code{CONFLICT-TEST} trong bảng?''
+\begin{loi}
+Vì \code{SIGNAL} làm câu INSERT thất bại và InnoDB rollback câu lệnh. Đây là bằng chứng trigger chặn trước khi ghi, không phải ghi rồi xóa. Nếu dùng \code{AFTER INSERT} rồi mới kiểm tra, sẽ phức tạp hơn và có thể lộ dữ liệu trung gian.
+\end{loi}
+
+\subsection{Procedure và function trên màn hình thống kê}
+
+\cue{LÀM}
+Trong web, vào \textbf{Quản trị} $\to$ tab \textbf{Thống kê}. Chọn học kỳ \code{2026-2027 · HK1}, lớp \code{CO1001-L01}, số bài nộp tối thiểu \code{0}.
+
+\cue{NÓI}
+\begin{loi}
+Bảng này lấy từ \code{sp_GetAssignmentStatistics}. Thầy thấy các cột: đủ điều kiện, đã nộp, thiếu, tỷ lệ, nộp cuối. Đây là dữ liệu tổng hợp từ 8 bảng, có \code{LEFT JOIN}, \code{GROUP BY}, \code{HAVING}, và \code{COUNT(DISTINCT)}. Cột ``Thiếu'' được tính bằng số đủ điều kiện trừ số đã nộp; nếu một sinh viên nộp nhiều lần, \code{COUNT(DISTINCT)} không đếm trùng.
+\end{loi}
+
+\cue{LÀM}
+Bấm nút \textbf{Kiểm tra hàm} ở dòng Assignment 1. Sau đó xuống khối \code{fn_CalculateStudentAverageScore}, chọn ghi danh \#1, bấm \textbf{Tính điểm trung bình}.
+
+\cue{NÓI}
+\begin{loi}
+Nút ``Kiểm tra hàm'' gọi \code{fn_CalculateAssignmentCompletionRate(1)}; kết quả kỳ vọng 100.00\%. Khối dưới gọi \code{fn_CalculateStudentAverageScore(1)}; kết quả kỳ vọng \code{82.50}. Đây là function thật trong MySQL, không phải JavaScript tính ở trình duyệt. Nếu thầy mở Network của DevTools, thầy sẽ thấy request \code{/api/statistics/...}; response là JSON do Flask lấy từ MySQL.
+\end{loi}
+
+\cue{LÀM}
+Nếu muốn thấy trực tiếp trong MySQL:
+
+\begin{lstlisting}[style=sql]
+CALL sp_GetStudentEnrollments(101, NULL, 'ACTIVE', 20, 0);
+CALL sp_GetAssignmentStatistics(1, NULL, 0);
+SELECT fn_CalculateAssignmentCompletionRate(1) AS CompletionRate;
+SELECT fn_CalculateStudentAverageScore(1) AS AverageScore;
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+Hai lệnh \code{CALL} trả result set; API đọc result set đó và đổi thành JSON. Hai \code{SELECT fn_...} trả một con số. Đây là khác biệt giữa procedure (có thể trả nhiều dòng) và function (trả một giá trị).
+\end{loi}
+
+\subsection{Kiểm thử tự động}
+
+\cue{LÀM}
+Mở terminal, chạy:
+
+\begin{lstlisting}[style=shell]
+uv run pytest -q
+python3 scripts/verify_database.py
+python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000
+\end{lstlisting}
+
+\cue{NÓI}
+\begin{loi}
+Nhóm em có 72 test pytest, 31 smoke API, và một script kiểm tra cấu trúc database. Các test không chỉ kiểm tra trường hợp đúng; có test cố ý vi phạm trigger, vi phạm unique, xóa ghi danh có điểm, để chứng minh ràng buộc thật sự chặn. Nếu thầy muốn, em có thể mở \code{docs/TEST_RESULTS.md} để đối chiếu từng nhóm.
+\end{loi}
+
+\cue{CHỐT}
+``Demo không phải để khoe giao diện; demo để chứng minh ba điều: dữ liệu đúng, lỗi bị chặn ở CSDL, và ứng dụng chỉ là lớp gọi.''
+
+\subsection{Tổng kết 90 giây}
+
+\cue{NÓI}
+\begin{loi}
+Em xin chốt ba điểm mạnh và hai hạn chế.
+
+\textbf{Ba điểm mạnh:} Một, mô hình 22 bảng chuẩn hóa, có xử lý subclass, weak entity, N:M và đa trị. Hai, ràng buộc nhiều tầng: PK/FK/UNIQUE/CHECK cho dữ liệu một hàng; trigger cho luật liên hàng; procedure cho transaction và khóa. Ba, có kiểm thử âm để chứng minh ràng buộc chạy thật, không chỉ tuyên bố trong báo cáo.
+
+\textbf{Hai hạn chế:} Một, phần xác thực chỉ là demo vai trò, chưa phải auth production; chưa có mật khẩu, CSRF, phân quyền đến từng bản ghi. Hai, trigger sĩ số không tự khóa dòng lớp; chống oversell hoàn chỉnh phụ thuộc vào việc mọi ghi danh đi qua procedure. Nhóm em ghi rõ những điểm này để không overclaim.
+
+Cuối cùng, em cảm ơn thầy đã nghe. Em sẵn sàng bị hỏi sâu vào bất kỳ bảng, trigger, procedure hoặc function nào.
+\end{loi}
+
+% =====================================================================
+\section{Ngân hàng câu hỏi \& trả lời}
+% =====================================================================
+
+\noindent Phần này để tập trước khi demo. Khi thầy hỏi, trả lời \textbf{ngắn trước}, rồi mở rộng nếu thầy hỏi tiếp.
+
+\subsection{Mô hình dữ liệu}
+
+\qa{Vì sao 22 bảng trong khi BTL1 nói khoảng 20 entity?}
+Vì BTL1 đếm entity nghiệp vụ, còn BTL2 đếm bảng vật lý. Chênh lệch đến từ các bảng con của ISA (\code{Student}/\code{Staff}/\code{Admin}), class-table (\code{Assignment}/\code{Quiz}), bảng yếu \code{SubmissionFile}, bảng nối \code{Section_Resource}, và bảng đa trị \code{AssignmentAttachment}. Tùy cách đếm của BTL1, con số không nhất thiết trùng; mỗi bảng vật lý đều có lý do, không có bảng trang trí.
+
+\qa{Vì sao \code{SubmissionCount} là cột vật lý?}
+Vì đây là thuộc tính dẫn xuất được đọc nhiều. Lưu sẵn giảm chi phí \code{COUNT} trên trang danh sách; trigger giữ khớp. Đây là denormalization có kiểm soát, có test cho INSERT/UPDATE/DELETE.
+
+\qa{Vì sao tách \code{Course}, \code{CourseComponent}, \code{CourseSection}?}
+Ba mức trả lời ba câu hỏi khác nhau: môn học là gì, môn gồm thành phần nào, học kỳ này mở lớp nào. Gộp sẽ lặp dữ liệu môn và vi phạm chuẩn hóa.
+
+\qa{Vì sao \code{Assignment} và \code{Quiz} tách khỏi \code{Assessment}?}
+Đây là class-table inheritance: bảng cha giữ cột chung, bảng con giữ cột riêng. Tránh nhiều cột NULL và giữ nghĩa cho từng loại. Đổi lại phải join khi đọc.
+
+\qa{Vì sao dùng khóa thay thế?}
+Khóa thay thế ổn định, ngắn, không lộ mã nghiệp vụ. Mã tự nhiên vẫn được bảo vệ bằng UNIQUE. Đây là lựa chọn thiết kế, không phải bắt buộc.
+
+\qa{Vì sao \code{AssignmentAttachment} không có ID riêng?}
+Vì nó là weak entity: tệp chỉ tồn tại trong bài tập; khóa ghép \code{(AssessmentID, AttachmentURL)} vừa định danh vừa chặn trùng. Thêm ID riêng vẫn phải có unique ghép, nên không mang thêm nghĩa.
+
+\qa{Vì sao \code{Section_Resource} có \code{DisplayOrder}?}
+Vì quan hệ N:M có thuộc tính. Thứ tự tài liệu là thuộc tính của cặp lớp--tài nguyên, không thuộc riêng lớp hay tài nguyên. Nếu bỏ, không biểu diễn được thứ tự hiển thị.
+
+\subsection{Ràng buộc}
+
+\qa{Vì sao dùng CHECK thay trigger ở một số chỗ?}
+CHECK rẻ, chạy trong mọi DML, khai báo rõ ngay trong bảng, phù hợp luật một hàng: miền giá trị, ngày, trạng thái, điểm không âm. Trigger chỉ dùng khi phải đọc hàng khác hoặc bảng khác. Dùng trigger cho việc CHECK làm được là overkill.
+
+\qa{Vì sao không dùng ENUM?}
+ENUM thêm giá trị phải ALTER TABLE, thứ tự so sánh phức tạp, và ít di động. \code{VARCHAR + CHECK IN} rõ ràng hơn, dễ mở rộng, đổi lại tốn vài byte.
+
+\qa{Vì sao email chỉ kiểm tra bằng LIKE?}
+Vì CHECK không đủ để kiểm tra RFC và không nên nhồi regex phức tạp vào CSDL. Nó chặn dữ liệu rác cơ bản; kiểm tra đầy đủ ở ứng dụng. Đây là giới hạn có ý thức.
+
+\qa{Vì sao có cả FK RESTRICT và procedure kiểm tra?}
+FK là chốt cuối, không thể bỏ qua. Procedure kiểm tra trước để trả thông báo thân thiện và chủ động. Hai lớp bảo vệ cùng mục tiêu nhưng khác vai trò.
+
+\qa{Vì sao \code{ON DELETE CASCADE} cho \code{SubmissionFile} nhưng RESTRICT cho \code{Grade}?}
+Vì file là phần phụ thuộc của bài nộp, xóa bài nộp thì file không còn nghĩa. Điểm là lịch sử học vụ, phải giữ; xóa dây chuyền sẽ mất dấu. Chính sách xóa phải theo ngữ nghĩa dữ liệu.
+
+\subsection{Trigger}
+
+\qa{Vì sao trùng lịch phải dùng trigger, không dùng UNIQUE?}
+UNIQUE chỉ chặn bằng nhau chính xác. Trùng lịch là chồng lấn khoảng: 8:30--10:00 và 9:00--10:30. Cần so sánh bốn mốc thời gian, không phải một bộ cột bằng nhau.
+
+\qa{Công thức chồng lấn là gì?}
+\code{NEW.Start < OLD.End AND OLD.Start < NEW.End}. Đây là điều kiện hai khoảng giao nhau. Phải lọc thêm cùng học kỳ, cùng ngày, cùng giảng viên hoặc cùng phòng.
+
+\qa{Vì sao validation dùng BEFORE, derived dùng AFTER?}
+BEFORE cho phép chặn trước khi ghi; nếu SIGNAL, câu lệnh hủy. AFTER cần dòng đã tồn tại để \code{COUNT} thấy nó, hoặc để cập nhật bảng dẫn xuất. Dùng sai thời điểm sẽ sai kết quả.
+
+\qa{Vì sao \code{SIGNAL SQLSTATE '45000'}?}
+Đây là lỗi người dùng định nghĩa, MySQL đổi thành 1644, làm câu lệnh thất bại và rollback. API bắt 1644 trả HTTP 400. Nếu chỉ trả cờ lỗi, câu lệnh có thể tiếp tục và ghi dữ liệu sai.
+
+\qa{Vì sao \code{FOR EACH ROW}?}
+Trigger cần \code{NEW}/\code{OLD} theo từng dòng. MySQL không có statement-level trigger. Với multi-row, mỗi dòng chạy trigger; một dòng lỗi làm cả câu lệnh thất bại.
+
+\qa{Vì sao 13 trigger, không gộp còn một?}
+Vì mỗi trigger gắn với một bảng và một thời điểm DML. Gộp không được: trigger của bảng này không chạy cho bảng khác. Tách theo bảng/thời điểm giúp dễ đọc, dễ bật/tắt, dễ test.
+
+\qa{Vì sao trigger đếm dùng \code{COUNT(*)} thay vì \code{+1}?}
+Vì \code{COUNT(*)} tự tính lại từ dữ liệu thật, nên nếu count bị lệch từ trước, trigger sửa lại đúng. \code{+1} nhanh hơn nhưng chỉ đúng nếu count ban đầu đúng tuyệt đối; một lần lỗi sẽ lệch mãi. Nhóm em chọn tính lại để bền.
+
+\qa{Vì sao trigger sĩ số không khóa dòng lớp?}
+Vì nhóm em đặt khóa ở procedure \code{sp_InsertEnrollment}, nơi mọi ghi danh đi qua. Trigger là lớp bảo vệ cuối, không phải cơ chế chống race. Nếu ghi trực tiếp đồng thời, vẫn có khe hở; đây là hạn chế đã ghi.
+
+\subsection{Procedure}
+
+\qa{Vì sao dùng procedure thay vì INSERT trực tiếp?}
+Vì ghi danh là nhiều bước: kiểm tra sinh viên, lớp, trùng, sĩ số; khóa; insert; commit; trả ID. Procedure gom logic vào một nơi, mọi client dùng chung, và có transaction.
+
+\qa{\code{FOR UPDATE} chống oversell thế nào?}
+Nó khóa dòng \code{CourseSection} trong transaction. Transaction khác muốn đọc/khóa cùng dòng phải chờ. Nhờ vậy, sau khi đếm ``còn 1 chỗ'', không ai chen vào trước khi mình insert.
+
+\qa{Vì sao \code{EXIT HANDLER} lại \code{ROLLBACK} rồi \code{RESIGNAL}?}
+\code{ROLLBACK} hủy mọi thay đổi dở dang, giải phóng khóa. \code{RESIGNAL} giữ nguyên mã lỗi và thông điệp gốc cho API. Nếu không rollback, transaction treo; nếu không resignal, mất thông tin lỗi.
+
+\qa{Vì sao \code{LAST_INSERT_ID()}?}
+Để trả về \code{EnrollmentID} vừa tạo. API cần ID để mở chi tiết hoặc cập nhật. Nếu không lấy, phải query lại theo các cột, không an toàn khi có nhiều dòng giống nhau.
+
+\qa{Vì sao \code{sp_DeleteEnrollment} không xóa khi có điểm?}
+Vì điểm là lịch sử học vụ. Xóa ghi danh sẽ làm điểm mồ côi hoặc cascade mất điểm. Procedure chủ động chặn; FK RESTRICT là chốt cuối.
+
+\qa{Vì sao \code{sp_UpdateEnrollment} không cho đổi \code{StudentID}?}
+Vì đổi sinh viên của một ghi danh là thao tác sai bản chất: đó là xóa ghi danh cũ và tạo ghi danh mới. Nếu cho đổi, điểm và lịch sử có thể gắn sai người. Muốn đổi thì xóa/tạo mới theo quy trình.
+
+\qa{Vì sao query procedure dùng \code{COALESCE}?}
+Để tham số NULL có giá trị mặc định: \code{LIMIT} mặc định 200, \code{OFFSET} mặc định 0. Nhờ vậy API không cần truyền đủ tham số. Đồng thời kiểm tra biên để tránh \code{LIMIT} quá lớn.
+
+\subsection{Function và truy vấn}
+
+\qa{Vì sao function dùng cursor?}
+Vì rubric yêu cầu cursor + IF/LOOP. Cách này duyệt từng sinh viên, dễ hiểu. Đổi lại chậm hơn set-based; với dữ liệu nhỏ chấp nhận được. Nếu production, em sẽ dùng \code{COUNT(DISTINCT)} hoặc precompute.
+
+\qa{Vì sao \code{CONTINUE HANDLER} thay vì \code{EXIT HANDLER}?}
+Vì khi hết dòng, ta chỉ muốn thoát vòng lặp, còn phải chạy \code{CLOSE} và tính kết quả. \code{EXIT} sẽ thoát function ngay, bỏ qua phần sau.
+
+\qa{Vì sao \code{READS SQL DATA}?}
+Function chỉ đọc, không ghi. Khai báo này cho MySQL biết và cần khi bật binary logging. Không khai báo \code{DETERMINISTIC} vì dữ liệu thay đổi.
+
+\qa{Vì sao \code{DECIMAL(5,2)}?}
+Lưu phần trăm tối đa 999.99 với hai chữ số thập phân. \code{FLOAT} có sai số nhị phân; \code{DECIMAL} chính xác cho điểm và tỷ lệ.
+
+\qa{Vì sao \code{COUNT(DISTINCT)} trong thống kê?}
+Vì join có thể nhân dòng: một sinh viên nhiều bài nộp, một lớp nhiều bài tập. \code{COUNT(DISTINCT StudentID)} đếm sinh viên, không đếm lượt. Nếu dùng \code{COUNT(*)}, tỷ lệ sẽ sai.
+
+\qa{Vì sao \code{LEFT JOIN} và \code{HAVING}?}
+\code{LEFT JOIN} giữ bài tập chưa có bài nộp; nếu INNER JOIN, bài 0 nộp biến mất. \code{HAVING} lọc sau khi \code{GROUP BY}, vì điều kiện là \code{COUNT}. \code{WHERE} không dùng được cho hàm tổng hợp.
+
+\qa{Vì sao function trả 0.00 khi không có dữ liệu?}
+Để tránh chia cho 0 và để UI có số hiển thị. Đánh đổi là không phân biệt ``0 điểm'' với ``chưa có dữ liệu''. Có thể trả thêm cờ \code{has_data} nếu cần.
+
+\subsection{Ứng dụng, kiểm thử, giới hạn}
+
+\qa{Frontend có kết nối MySQL trực tiếp không?}
+Không. Frontend chỉ gọi API Flask. Flask giữ cấu hình DB và gọi procedure/function. Điều này che giấu thông tin kết nối và tập trung logic một chỗ. Nếu frontend kết nối trực tiếp, mọi ràng buộc và phân quyền khó kiểm soát.
+
+\qa{Vì sao không dùng ORM?}
+ORM tiện cho CRUD đơn giản, nhưng ở đây trọng tâm là CSDL: trigger, procedure, function, transaction, khóa. Dùng ORM dễ che mất các object này và làm sinh viên không thấy SQL thật. Nhóm em dùng repository gọi thẳng procedure để đúng yêu cầu môn.
+
+\qa{Vì sao không dùng procedure cho mọi câu SELECT?}
+Vì không phải truy vấn nào cũng cần tham số hóa, transaction hoặc tái sử dụng. Các truy vấn đơn giản trong repository vẫn là SELECT thường. Nhóm em dùng procedure cho hai truy vấn phức tạp có lọc động và thống kê, đúng phạm vi rubric.
+
+\qa{Vì sao không có view?}
+View không bắt buộc và không giải quyết tham số động. Nhóm em ưu tiên procedure cho truy vấn có tham số. Nếu cần che giấu cột nhạy cảm, view là lựa chọn tốt; hiện tại phạm vi chưa cần.
+
+\qa{Vì sao không có trigger cho quiz?}
+Quiz có các ràng buộc một hàng như \code{OpenTime < CloseTime}, \code{DurationMinutes > 0}, unique attempt; các ràng buộc này dùng CHECK/UNIQUE. Ràng buộc thời gian làm bài và số lần làm phức tạp hơn, nhóm em để ứng dụng kiểm soát. Đây là phạm vi có ý thức, không phải sót.
+
+\qa{Vì sao không upload file thật?}
+Nhóm em lưu metadata file (\code{FileName}, \code{FileURL}, \code{FileSize}) để mô hình hóa đa trị và weak entity. Upload nhị phân, chống virus, giới hạn dung lượng là phần hạ tầng, ngoài trọng tâm CSDL. Nếu làm thật, cần storage, kiểm tra MIME, signed URL.
+
+\qa{Vì sao kiểm thử âm quan trọng?}
+Vì test đúng chỉ chứng minh đường thành công. Test âm chứng minh ràng buộc thật sự chặn: trùng lịch, trùng ghi danh, vượt sĩ số, xóa ghi danh có điểm, điểm vượt max. Nếu không có test âm, rất dễ tuyên bố trigger chạy mà thực tế chưa bật.
+
+\qa{Điểm yếu lớn nhất của đồ án là gì?}
+Ba điểm: auth chỉ là demo vai trò; chống oversell phụ thuộc procedure, trigger không tự khóa; và chưa test tải/đồng thời thật. Nhóm em ghi rõ trong báo cáo. Hướng cải tiến: dùng transaction isolation phù hợp, khóa hoặc unique constraint bổ sung, auth thật, test concurrent.
+
+\qa{Nếu có thêm thời gian, nhóm làm gì?}
+Một, thêm audit log cho thay đổi điểm và ghi danh. Hai, thêm view/Procedure cho báo cáo học kỳ. Ba, test concurrent cho sĩ số. Bốn, chuẩn hóa auth và upload. Nhưng nhóm em ưu tiên hoàn thành đúng rubric trước.
+
+% =====================================================================
+\section{Checklist và phương án dự phòng}
+% =====================================================================
+
+\subsection{Trước khi vào demo}
+
+\begin{enumerate}
+    \item MySQL chạy; database \code{hcmut_lms} tồn tại; đã chạy \code{run_all.sql} nếu cần.
+    \item Flask chạy ở \code{127.0.0.1:5000}; \code{/api/health} trả 200.
+    \item \code{smoke_api.py} chạy 31/31; \code{pytest -q} 72 passed.
+    \item Mở sẵn 3 tab: web app, MySQL client, thư mục \code{docs/evidence}.
+    \item Mở sẵn file \code{database/triggers/05_triggers.sql}, \code{06_procedures.sql}, \code{07_functions.sql} để chỉ khi bị hỏi.
+    \item Kiểm tra tài khoản: Student 101, Staff 201, Admin 301; Student 108 LOCKED để nói về trạng thái.
+    \item Reset dữ liệu nếu đã tập nhiều lần; chấp nhận mất dữ liệu demo.
+    \item Tắt thông báo, đóng tab thừa, chỉnh cỡ chữ terminal đủ lớn.
+\end{enumerate}
+
+\subsection{Nếu sự cố}
+
+\begin{longtable}{p{3.5cm}p{5.2cm}p{5.0cm}}
+\caption{Phương án dự phòng khi demo lỗi}\\
+\toprule
+\textbf{Tình huống} & \textbf{Cách xử lý} & \textbf{Câu nói} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Tình huống} & \textbf{Cách xử lý} & \textbf{Câu nói} \\
+\midrule
+\endhead
+Flask không chạy & Chạy lại \code{uv run python run.py}; kiểm tra port & ``API đang khởi động lại, trong lúc chờ em demo SQL trực tiếp.'' \\
+MySQL không chạy & Khởi động container/local service; chạy \code{verify_database.py} & ``Phần CSDL em có script kiểm tra độc lập.'' \\
+UI lỗi & Dùng \code{smoke_api.py} và \code{curl}/MySQL & ``Em chuyển sang demo tầng API/CSDL để thầy thấy logic.'' \\
+Dữ liệu bị bẩn & Reset trước demo, không reset giữa chừng & ``Em dùng seed chuẩn để số liệu khớp báo cáo.'' \\
+Hết thời gian & Ưu tiên CRUD + 1 trigger + 2 function & ``Em xin tóm gọn phần còn lại trong báo cáo.'' \\
+Thầy hỏi quá sâu & Trả lời ngắn, mở file/đoạn code tương ứng & ``Em xin chỉ đúng dòng trong file trigger/procedure.'' \\
+\bottomrule
+\end{longtable}
+
+\subsection{Nguyên tắc trả lời khi bị hỏi khó}
+
+\begin{enumerate}
+    \item \textbf{Không đoán.} Nếu chưa chắc, nói: ``Em không nhớ chính xác dòng đó, em xin mở file để trả lời đúng.'' Mở file là bình thường, không mất điểm.
+    \item \textbf{Trả lời theo ba lớp:} mục đích → cơ chế → đánh đổi. Ví dụ: ``Em dùng trigger để chặn trùng lịch; cơ chế là so sánh bốn mốc thời gian; đánh đổi là trigger chạy từng dòng.''
+    \item \textbf{Thừa nhận giới hạn.} Nếu bị hỏi điểm yếu, đừng chống chế. Nói rõ giới hạn và hướng sửa. Giảng viên thường đánh giá cao sự trung thực có hiểu biết.
+    \item \textbf{Đừng đổ lỗi cho công cụ.} Lỗi MySQL là bằng chứng ràng buộc chạy, không phải thảm họa. Đọc mã lỗi và thông điệp.
+\end{enumerate}
+
+% =====================================================================
+\appendix
+\section{Bảng tra nhanh 22 bảng}
+% =====================================================================
+
+\begin{longtable}{p{3.5cm}p{5.6cm}p{5.8cm}}
+\caption{22 bảng: vai trò và điểm đáng nói}\\
+\toprule
+\textbf{Bảng} & \textbf{Vai trò} & \textbf{Điểm đáng nói} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Bảng} & \textbf{Vai trò} & \textbf{Điểm đáng nói} \\
+\midrule
+\endhead
+\code{UserAccount} & Tài khoản chung & PK \code{UserID}; UNIQUE email; trạng thái tài khoản. \\
+\code{Student} & Hồ sơ sinh viên & PK/FK \code{UserID}; UNIQUE \code{StudentCode}; thuộc khoa. \\
+\code{Staff} & Hồ sơ cán bộ & PK/FK \code{UserID}; thuộc khoa. \\
+\code{Admin} & Hồ sơ quản trị & PK/FK \code{UserID}; bảng mỏng. \\
+\code{Faculty} & Khoa & PK \code{FacultyID}; tên Việt/Anh. \\
+\code{Semester} & Học kỳ & UNIQUE \code{(AcademicYear, TermNo)}; CHECK ngày và term. \\
+\code{Course} & Danh mục môn & UNIQUE \code{CourseCode}; số tín chỉ; khoa. \\
+\code{CourseComponent} & Thành phần môn & UNIQUE \code{(CourseID, ComponentType)}; 1:N với Course. \\
+\code{CourseSection} & Lớp mở trong học kỳ & UNIQUE \code{(SemesterID, SectionCode)}; lịch, phòng, sĩ số; trigger trùng lịch. \\
+\code{Enrollment} & Ghi danh & UNIQUE \code{(StudentID, SectionID)}; trigger sĩ số; procedure CRUD. \\
+\code{Announcement} & Thông báo lớp & FK Staff, Section; CHECK thời hạn. \\
+\code{LearningResource} & Tài nguyên học tập & Người upload, loại, URL. \\
+\code{Section_Resource} & N:M lớp--tài nguyên & PK ghép; \code{DisplayOrder}, \code{IsVisible}. \\
+\code{Assessment} & Bài đánh giá chung & Thuộc lớp; \code{MaxScore}, \code{MaxAttempts}; CHECK. \\
+\code{Assignment} & Bài tập & PK/FK \code{AssessmentID}; \code{OpenDate < DueDate}; \code{SubmissionCount}. \\
+\code{AssignmentAttachment} & Tệp của bài tập & Weak entity; PK \code{(AssessmentID, AttachmentURL)}. \\
+\code{Submission} & Bài nộp & UNIQUE \code{(AssignmentID, StudentID, AttemptNo)}; trigger validate; trigger count. \\
+\code{SubmissionFile} & Tệp bài nộp & Weak entity; PK \code{(SubmissionID, FileNo)}. \\
+\code{Quiz} & Bài trắc nghiệm & PK/FK \code{AssessmentID}; thời gian, duration. \\
+\code{QuizAttempt} & Lần làm quiz & UNIQUE \code{(QuizID, StudentID, AttemptNo)}; thời gian, điểm. \\
+\code{Grade} & Điểm bài đánh giá & UNIQUE \code{(EnrollmentID, AssessmentID)}; trigger validate; RESTRICT. \\
+\code{Feedback} & Phản hồi & FK Submission, Author, Parent; trigger validate. \\
+\bottomrule
+\end{longtable}
+
+\noindent\textit{Ghi chú: số cột/FK/UNIQUE/CHECK chi tiết nằm trong \code{tailieu/generated_inventory.tex} và \code{docs/SCHEMA_INVENTORY.md}.}
+
+% =====================================================================
+\section{Bảng tra syntax SQL}
+% =====================================================================
+
+\noindent Khi thầy chỉ vào một dòng và hỏi ``syntax này tác dụng gì'', trả lời theo bảng này. Cột cuối là câu nói ngắn.
+
+\begin{longtable}{p{3.6cm}p{4.3cm}p{6.4cm}}
+\caption{Syntax quan trọng và cách giải thích}\\
+\toprule
+\textbf{Syntax} & \textbf{Tác dụng} & \textbf{Cách nói / vì sao dùng} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Syntax} & \textbf{Tác dụng} & \textbf{Cách nói / vì sao dùng} \\
+\midrule
+\endhead
+\code{PRIMARY KEY} & Định danh duy nhất mỗi hàng, không NULL & ``Mỗi bảng cần một khóa ổn định để tham chiếu; em dùng surrogate key.'' \\
+\code{FOREIGN KEY} & Bảo đảm giá trị tham chiếu tồn tại & ``Không thể ghi danh cho sinh viên không tồn tại.'' \\
+\code{ON DELETE CASCADE} & Xóa cha thì xóa con & ``Dùng cho bảng phụ thuộc hoàn toàn, như file của bài nộp.'' \\
+\code{ON DELETE RESTRICT} & Cấm xóa cha nếu còn con & ``Dùng cho điểm/ghi danh để giữ lịch sử học vụ.'' \\
+\code{ON DELETE SET NULL} & Xóa cha thì con thành NULL & ``Dùng cho quan hệ tùy chọn, như giảng viên phụ trách.'' \\
+\code{UNIQUE} & Không cho trùng bộ cột & ``Unique kép mới đúng nghiệp vụ; unique một cột sẽ chặn nhầm.'' \\
+\code{CHECK} & Kiểm tra miền giá trị một hàng & ``Dùng cho Capacity > 0, ngày, trạng thái, điểm.'' \\
+\code{AUTO_INCREMENT} & Tự sinh khóa tăng & ``Tiện tạo khóa thay thế; mã nghiệp vụ vẫn có UNIQUE riêng.'' \\
+\code{CREATE TRIGGER ... BEFORE INSERT ... FOR EACH ROW} & Chạy trước mỗi dòng insert & ``BEFORE để chặn trước khi ghi; FOR EACH ROW để dùng NEW.'' \\
+\code{AFTER INSERT/UPDATE/DELETE} & Chạy sau khi dòng đã thay đổi & ``AFTER để COUNT thấy dòng mới, hoặc để cập nhật bảng dẫn xuất.'' \\
+\code{NEW} / \code{OLD} & Giá trị sau/thời điểm trước của dòng & ``NEW cho insert/update; OLD cho delete/update.'' \\
+\code{SIGNAL SQLSTATE '45000'} & Báo lỗi người dùng, hủy câu lệnh & ``MySQL trả 1644; API đổi thành HTTP 400; transaction rollback.'' \\
+\code{CREATE PROCEDURE} & Gói nhiều câu SQL có tham số & ``Dùng cho CRUD nhiều bước, transaction, khóa.'' \\
+\code{IN p_...} & Tham số đầu vào & ``Procedure nhận ID/trạng thái từ API.'' \\
+\code{DECLARE EXIT HANDLER FOR SQLEXCEPTION} & Bắt lỗi và thoát block & ``ROLLBACK rồi RESIGNAL để không mất lỗi gốc.'' \\
+\code{START TRANSACTION} & Mở transaction & ``Các bước phải cùng thành công hoặc cùng hủy.'' \\
+\code{SELECT ... FOR UPDATE} & Khóa ghi trên dòng đọc & ``Chống hai transaction cùng vượt sĩ số.'' \\
+\code{COMMIT} / \code{ROLLBACK} & Chốt/hủy transaction & ``COMMIT khi xong; ROLLBACK khi lỗi.'' \\
+\code{RESIGNAL} & Ném lại lỗi gốc & ``Giữ mã 1644 và message cho API.'' \\
+\code{LAST_INSERT_ID()} & Lấy ID vừa auto-increment & ``Trả EnrollmentID mới cho client.'' \\
+\code{CREATE FUNCTION ... RETURNS DECIMAL(5,2)} & Tạo hàm trả một giá trị & ``Dùng cho tỷ lệ phần trăm và điểm trung bình.'' \\
+\code{READS SQL DATA} & Khai báo function chỉ đọc & ``Không ghi dữ liệu; cần khi binary logging bật.'' \\
+\code{DECLARE ... CURSOR FOR} & Khai báo con trỏ & ``Duyệt từng sinh viên/điểm theo yêu cầu rubric.'' \\
+\code{CONTINUE HANDLER FOR NOT FOUND} & Bắt hết dòng, đặt cờ & ``Để thoát vòng lặp mà vẫn chạy CLOSE và tính toán.'' \\
+\code{OPEN / FETCH / CLOSE} & Mở, lấy từng dòng, đóng cursor & ``FETCH vào biến; CLOSE giải phóng tài nguyên.'' \\
+\code{LOOP ... LEAVE ... END LOOP} & Vòng lặp có nhãn & ``LEAVE giống break; không thoát function.'' \\
+\code{RETURN} & Trả kết quả function & ``Trả 0.00 nếu không có dữ liệu; tránh chia 0.'' \\
+\code{COUNT(DISTINCT ...)} & Đếm giá trị không trùng & ``Join có thể nhân dòng; đếm sinh viên, không đếm lượt nộp.'' \\
+\code{LEFT JOIN} & Giữ bảng trái dù không khớp & ``Giữ bài tập chưa có bài nộp; nếu INNER sẽ mất.'' \\
+\code{HAVING} & Lọc sau GROUP BY & ``Điều kiện là COUNT, nên không dùng WHERE.'' \\
+\code{COALESCE} & Lấy giá trị mặc định khi NULL & ``Tham số lọc NULL-friendly; LIMIT mặc định 200.'' \\
+\code{CREATE INDEX} & Tăng tốc lọc/join & ``Đánh index cho cột hay dùng trong WHERE/JOIN; đừng đánh mọi cột.'' \\
+\code{EXPLAIN} & Xem kế hoạch truy vấn & ``Kiểm tra có dùng index hay full scan.'' \\
+\bottomrule
+\end{longtable}
+
+% =====================================================================
+\section{Lệnh demo nhanh}
+% =====================================================================
+
+\subsection{Kết nối và xem cấu trúc}
+
+\begin{lstlisting}[style=shell]
+# Docker (container test)
+docker exec -it hcmut-lms-mysql-test mysql -uroot -proot hcmut_lms
+
+# Local
+mysql -u root -p hcmut_lms
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+SHOW TABLES;
+SELECT COUNT(*) FROM information_schema.tables
+ WHERE table_schema = 'hcmut_lms';
+
+SHOW CREATE TABLE Enrollment\G
+SHOW CREATE TABLE Grade\G
+SHOW CREATE TABLE Submission\G
+
+SHOW TRIGGERS;
+SHOW PROCEDURE STATUS WHERE Db = 'hcmut_lms';
+SHOW FUNCTION STATUS WHERE Db = 'hcmut_lms';
+\end{lstlisting}
+
+\subsection{Procedure và function}
+
+\begin{lstlisting}[style=sql]
+CALL sp_GetStudentEnrollments(101, NULL, 'ACTIVE', 20, 0);
+CALL sp_GetAssignmentStatistics(1, NULL, 0);
+
+SELECT fn_CalculateAssignmentCompletionRate(1) AS CompletionRate;
+SELECT fn_CalculateStudentAverageScore(1) AS AverageScore;
+\end{lstlisting}
+
+\subsection{Trigger test}
+
+\begin{lstlisting}[style=sql]
+-- Truoc khi test: xem count
+SELECT AssessmentID, SubmissionCount
+FROM Assignment
+ORDER BY AssessmentID;
+
+-- Count tu tang/giam
+SOURCE database/tests/05_trigger_derived_submission_count.sql;
+
+-- Trung lich: phai loi 1644
+SOURCE database/tests/04_trigger_expected_fail_schedule.sql;
+
+-- Kiem tra si so
+SELECT cs.SectionID, cs.Capacity,
+       SUM(e.EnrollmentStatus = 'ACTIVE') AS ActiveCount
+FROM CourseSection cs
+LEFT JOIN Enrollment e ON e.SectionID = cs.SectionID
+GROUP BY cs.SectionID, cs.Capacity;
+\end{lstlisting}
+
+Nếu \code{SOURCE} báo không tìm thấy file, dùng đường dẫn tuyệt đối hoặc đẩy file qua stdin:
+
+\begin{lstlisting}[style=shell]
+docker exec -i hcmut-lms-mysql-test mysql -uroot -proot hcmut_lms \
+  < database/tests/05_trigger_derived_submission_count.sql
+
+docker exec -i hcmut-lms-mysql-test mysql -uroot -proot hcmut_lms \
+  < database/tests/04_trigger_expected_fail_schedule.sql
+\end{lstlisting}
+
+\subsection{Kiểm thử và reset}
+
+\begin{lstlisting}[style=shell]
+cd /home/nam/AI-Agent-Lab/hcmut-lms-btl2
+
+uv run pytest -q
+python3 scripts/verify_database.py
+python3 scripts/smoke_api.py --base-url http://127.0.0.1:5000
+
+# Chi chay truoc demo, KHONG chay giua buoi
+mysql -u root -p < database/reset_database.sql
+mysql -u root -p < database/run_all.sql
+\end{lstlisting}
+
+% =====================================================================
+\section{Trang nhắc 1 phút trước khi lên}
+% =====================================================================
+
+\begin{enumerate}
+    \item \textbf{Mở đầu:} ``Đây là môn CSDL, nên em đi từ dữ liệu, không đi từ giao diện.''
+    \item \textbf{Mô hình:} ``22 bảng, 5 miền; tách Course--Component--Section để chuẩn hóa; SubmissionCount là denormalization có trigger.''
+    \item \textbf{Ràng buộc:} ``CHECK cho một hàng; UNIQUE kép cho nghiệp vụ; FK quyết định xóa; trigger cho luật liên bảng.''
+    \item \textbf{Trigger:} ``BEFORE để validate, AFTER để derived; SIGNAL 45000; OLD/NEW; FOR EACH ROW.''
+    \item \textbf{Procedure:} ``Transaction, FOR UPDATE chống oversell, EXIT HANDLER + ROLLBACK + RESIGNAL.''
+    \item \textbf{Function:} ``Cursor, IF/LOOP, READS SQL DATA; trả 0.00 khi không có dữ liệu.''
+    \item \textbf{CRUD demo:} ``Thêm 2210007; trùng 2210001; sửa DROPPED; xóa \#1 bị chặn vì có điểm.''
+    \item \textbf{Trigger demo:} ``Assignment 6 count 0 $\to$ 1 $\to$ 0; trùng lịch báo lỗi 1644.''
+    \item \textbf{Function demo:} ``Assignment 1 = 100.00\%; Enrollment 1 = 82.50.''
+    \item \textbf{Kiểm thử:} ``72 pytest, 31 smoke, DB verifier; có test âm.''
+    \item \textbf{Giới hạn:} ``Auth demo; trigger sĩ số không tự khóa; chưa test tải.'' Nói thật, đừng chống chế.
+    \item \textbf{Kết:} ``Dữ liệu đúng, lỗi bị chặn ở CSDL, ứng dụng chỉ là lớp gọi.''
+\end{enumerate}
+
+\vfill
+\begin{center}
+\small
+Hết kịch bản.\\
+Tài liệu này chỉ giao dưới dạng \code{.tex}; không kèm PDF theo yêu cầu.
+\end{center}
+
+\end{document}
